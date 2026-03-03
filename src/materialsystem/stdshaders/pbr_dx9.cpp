@@ -21,6 +21,7 @@ const Sampler_t SAMPLER_BASETEXTURE = SHADER_SAMPLER0;
 const Sampler_t SAMPLER_NORMAL = SHADER_SAMPLER1;
 const Sampler_t SAMPLER_ENVMAP = SHADER_SAMPLER2;
 const Sampler_t SAMPLER_LIGHTWARP = SHADER_SAMPLER3;
+const Sampler_t SAMPLER_THICKNESS = SHADER_SAMPLER3;
 const Sampler_t SAMPLER_SHADOWDEPTH = SHADER_SAMPLER4;
 const Sampler_t SAMPLER_RANDOMROTATION = SHADER_SAMPLER5;
 const Sampler_t SAMPLER_FLASHLIGHT = SHADER_SAMPLER6;
@@ -66,12 +67,16 @@ struct PBR_Vars_t
     int useEnvAmbient;
     int specularTexture;
     int lightwarpTexture;
+    int thicknessTexture;
     int metalnessFactor;
     int roughnessFactor;
     int emissiveFactor;
     int specularFactor;
     int aoFactor;
     int ssaoFactor;
+    int sssColor;
+    int sssIntensity;
+    int sssPowerScale;
     int compressTexture;
     int bumpCompressTexture;
     int stretchTexture;
@@ -92,6 +97,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
         SHADER_PARAM(USEENVAMBIENT, SHADER_PARAM_TYPE_BOOL, "0", "Use the cubemaps to compute ambient light.");
         SHADER_PARAM(SPECULARTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Specular F0 RGB map");
         SHADER_PARAM(LIGHTWARPTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Lightwarp Texture" );
+        SHADER_PARAM(THICKNESSTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Thickness map for SSS" );
         SHADER_PARAM(PARALLAX, SHADER_PARAM_TYPE_BOOL, "0", "Use Parallax Occlusion Mapping.");
         SHADER_PARAM(PARALLAXDEPTH, SHADER_PARAM_TYPE_FLOAT, "0.0030", "Depth of the Parallax Map");
         SHADER_PARAM(PARALLAXCENTER, SHADER_PARAM_TYPE_FLOAT, "0.5", "Center depth of the Parallax Map");
@@ -101,6 +107,9 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
         SHADER_PARAM(SPECULARFACTOR, SHADER_PARAM_TYPE_FLOAT, "1.0", "Specular factor" );
         SHADER_PARAM(AOFACTOR, SHADER_PARAM_TYPE_FLOAT, "1.0", "Ambient occlusion factor");
         SHADER_PARAM(SSAOFACTOR, SHADER_PARAM_TYPE_FLOAT, "1.0", "Screen space ambient occlusion factor");
+        SHADER_PARAM(SSSCOLOR, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Subsurface scattering color");
+        SHADER_PARAM(SSSINTENSITY, SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS intensity");
+        SHADER_PARAM(SSSPOWERSCALE, SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS power scale");
         SHADER_PARAM(COMPRESS, SHADER_PARAM_TYPE_TEXTURE, "", "Compression wrinklemap");
         SHADER_PARAM(BUMPCOMPRESS, SHADER_PARAM_TYPE_TEXTURE, "", "Stretch bumpmap" );
         SHADER_PARAM(STRETCH, SHADER_PARAM_TYPE_TEXTURE, "", "Stretch wrinklemap");
@@ -125,6 +134,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
         info.useEnvAmbient = USEENVAMBIENT;
         info.specularTexture = SPECULARTEXTURE;
         info.lightwarpTexture = LIGHTWARPTEXTURE;
+        info.thicknessTexture = THICKNESSTEXTURE;
         info.useParallax = PARALLAX;
         info.parallaxDepth = PARALLAXDEPTH;
         info.parallaxCenter = PARALLAXCENTER;
@@ -134,6 +144,9 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
         info.specularFactor = SPECULARFACTOR;
         info.aoFactor = AOFACTOR;
         info.ssaoFactor = SSAOFACTOR;
+        info.sssColor = SSSCOLOR;
+        info.sssIntensity = SSSINTENSITY;
+        info.sssPowerScale = SSSPOWERSCALE;
         info.compressTexture = COMPRESS;
         info.bumpCompressTexture = BUMPCOMPRESS;
         info.stretchTexture = STRETCH;
@@ -186,10 +199,18 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
         INIT_FLOAT_PARM( METALNESSFACTOR, 1.0f );
         INIT_FLOAT_PARM( ROUGHNESSFACTOR, 1.0f );
-        INIT_FLOAT_PARM( AOFACTOR, 1.0f );
-        INIT_FLOAT_PARM( SSAOFACTOR, 1.0f );
         INIT_FLOAT_PARM( EMISSIVEFACTOR, 1.0f );
         INIT_FLOAT_PARM( SPECULARFACTOR, 1.0f );
+        INIT_FLOAT_PARM( AOFACTOR, 1.0f );
+        INIT_FLOAT_PARM( SSAOFACTOR, 1.0f );
+        INIT_FLOAT_PARM( SSSINTENSITY, 1.0f );
+        INIT_FLOAT_PARM( SSSPOWERSCALE, 1.0f );
+
+        if (!params[SSSCOLOR]->IsDefined())
+        {
+            Vector color(1, 1, 1);
+            params[SSSCOLOR]->SetVecValue(color.Base(), 3);
+        }
     };
 
     // Define shader fallback
@@ -233,6 +254,11 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
         if (params[info.lightwarpTexture]->IsDefined())
         {
             LoadTexture(info.lightwarpTexture);
+        }
+
+        if (params[info.thicknessTexture]->IsDefined())
+        {
+            LoadTexture(info.thicknessTexture);
         }
 
         // If compress is present this means all wrinklemap textures should be present
@@ -284,7 +310,9 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
         bool bLightMapped = !IS_FLAG_SET(MATERIAL_VAR_MODEL);
         bool bUseEnvAmbient = (info.useEnvAmbient != -1) && (params[info.useEnvAmbient]->GetIntValue() == 1);
         bool bHasSpecularTexture = (info.specularTexture != -1) && params[info.specularTexture]->IsTexture();
-        bool bLightwarpTexture = (info.lightwarpTexture != -1) && params[info.lightwarpTexture]->IsTexture();
+        bool bThicknessTexture = !bLightMapped && (info.thicknessTexture != -1) && params[info.thicknessTexture]->IsTexture();
+        // Can't have lightwarp and SSS together
+        bool bLightwarpTexture = !bThicknessTexture && (info.lightwarpTexture != -1) && params[info.lightwarpTexture]->IsTexture();
         // Only supported on models
         bool bWrinkleMapping = !bLightMapped && (info.compressTexture != -1) && params[info.compressTexture]->IsDefined();
 
@@ -351,8 +379,14 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
                 }
             }
 
+            // Thickness (SSS)
+            if (bThicknessTexture)
+            {
+                pShaderShadow->EnableTexture(SAMPLER_THICKNESS, true); 
+                pShaderShadow->EnableSRGBRead(SAMPLER_THICKNESS, false);
+            }     
             // Lightwarp
-            if (bLightwarpTexture)
+            else if (bLightwarpTexture)
             {
                 pShaderShadow->EnableTexture(SAMPLER_LIGHTWARP, true); 
                 pShaderShadow->EnableSRGBRead(SAMPLER_LIGHTWARP, false);
@@ -420,10 +454,11 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
             SET_STATIC_PIXEL_SHADER_COMBO(LIGHTWARPTEXTURE, bLightwarpTexture);
             SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
+            SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
             SET_STATIC_PIXEL_SHADER(pbr_ps30);
 
             // Setting up fog
-            if ( bHasFlashlight )
+            if (bHasFlashlight)
                 FogToBlack();
             else
                 DefaultFog(); // I think this is correct
@@ -522,6 +557,10 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             }
 
             if (bLightwarpTexture)
+            {
+                BindTexture(SAMPLER_THICKNESS, info.thicknessTexture, 0);
+            }
+            else if (bLightwarpTexture)
             {
                 BindTexture(SAMPLER_LIGHTWARP, info.lightwarpTexture, 0);
             }
@@ -675,13 +714,20 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             };
             pShaderAPI->SetPixelShaderConstant(PSREG_PBR_MRAO_FACTORS, vMRAOFactors, 1);
 
-            // Emissive, specular factors
+            // Emissive, specular factors, SSS intensity and power scale 
             float vExtraFactors[4] =
             {
                 GetFloatParam( info.emissiveFactor, params, 1.0f ),
                 GetFloatParam( info.specularFactor, params, 1.0f ),
+                GetFloatParam( info.sssIntensity, params, 1.0f ),
+                GetFloatParam( info.sssPowerScale, params, 1.0f ),
             };
             pShaderAPI->SetPixelShaderConstant(PSREG_PBR_EXTRA_FACTORS, vExtraFactors, 1);
+
+            float vSSSColor[4] = { 0, 0, 0, 0 };
+            if ( info.sssColor != -1 )
+                params[info.baseColor]->GetVecValue( vSSSColor, 3 );
+            pShaderAPI->SetPixelShaderConstant( PSREG_PBR_SSS_COLOR, vSSSColor, 1 );
 
             // Need this for sampling SSAO
             pShaderAPI->SetScreenSizeForVPOS();

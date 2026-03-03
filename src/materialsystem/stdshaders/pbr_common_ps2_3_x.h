@@ -273,3 +273,26 @@ float3 worldToRelative(float3 worldVector, float3 surfTangent, float3 surfBasis,
        dot(worldVector, surfNormal)
    );
 }
+
+#if SUBSURFACESCATTERING 
+float3 ComputeSubsurfaceScattering(float3 surfaceNormal, float3 lightDir, float3 viewDirection, float thickness, float3 sssColor, float intensity, float powerScale)
+{
+    float backlit = max(0.0, -dot(surfaceNormal, lightDir));
+
+    backlit = pow(backlit, 0.3);
+
+    float transmittance = pow(1.0 - thickness, powerScale);
+
+    float sssStrength = backlit * transmittance;
+
+    float ambientSSS = transmittance * 0.3;
+    sssStrength = max(sssStrength, ambientSSS);
+
+    float3 sssResult = sssColor * sssStrength * intensity;
+
+    float facingFactor = saturate(dot(viewDirection, surfaceNormal));
+    sssResult *= (0.7 + 0.3 * facingFactor);
+
+    return sssResult;
+}
+#endif
