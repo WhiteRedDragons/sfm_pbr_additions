@@ -38,7 +38,6 @@ const Sampler_t SAMPLER_BUMPSTRETCH = SHADER_SAMPLER15;
 // Convars
 static ConVar mat_fullbright("mat_fullbright", "0", FCVAR_CHEAT);
 static ConVar mat_specular("mat_specular", "1", FCVAR_NONE);
-//static ConVar mat_pbr_force_20b("mat_pbr_force_20b", "0", FCVAR_CHEAT);
 static ConVar mat_pbr_parallaxmap("mat_pbr_parallaxmap", "1");
 
 // Variables for this shader
@@ -496,14 +495,14 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             }
 
             // Setting up vmt color
-            Vector color;
+            Vector4D color( 0, 0, 0, 0 );
             if (bHasColor)
             {
                 params[info.baseColor]->GetVecValue(color.Base(), 3);
             }
             else
             {
-                color = Vector{1.f, 1.f, 1.f};
+                color.Init( 1, 1, 1 );
             }
             pShaderAPI->SetPixelShaderConstant(PSREG_SELFILLUMTINT, color.Base());
 
