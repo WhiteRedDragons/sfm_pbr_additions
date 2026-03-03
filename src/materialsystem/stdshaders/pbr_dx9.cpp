@@ -52,6 +52,7 @@ struct PBR_Vars_t
     int baseColor;
     int normalTexture;
     int bumpMap;
+    int bumpMapFrame;
     int envMap;
     int baseTextureFrame;
     int baseTextureTransform;
@@ -93,6 +94,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
         SHADER_PARAM(EMISSIONTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Emission texture");
         SHADER_PARAM(NORMALTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture (deprecated, use $bumpmap)");
         SHADER_PARAM(BUMPMAP, SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture");
+        SHADER_PARAM(BUMPFRAME, SHADER_PARAM_TYPE_INTEGER, "0", "Frame number for $bumpmap")
         SHADER_PARAM(USEENVAMBIENT, SHADER_PARAM_TYPE_BOOL, "0", "Use the cubemaps to compute ambient light.");
         SHADER_PARAM(SPECULARTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Specular F0 RGB map");
         SHADER_PARAM(LIGHTWARPTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Lightwarp Texture" );
@@ -122,6 +124,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
         info.baseColor = COLOR;
         info.normalTexture = NORMALTEXTURE;
         info.bumpMap = BUMPMAP;
+        info.bumpMapFrame = BUMPFRAME;
         info.baseTextureFrame = FRAME;
         info.baseTextureTransform = BASETEXTURETRANSFORM;
         info.alphaTestReference = ALPHATESTREFERENCE;
@@ -196,20 +199,18 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             params[FLASHLIGHTTEXTURE]->SetStringValue("effects/flashlight001");
         }
 
-        INIT_FLOAT_PARM( METALNESSFACTOR, 1.0f );
-        INIT_FLOAT_PARM( ROUGHNESSFACTOR, 1.0f );
-        INIT_FLOAT_PARM( EMISSIVEFACTOR, 1.0f );
-        INIT_FLOAT_PARM( SPECULARFACTOR, 1.0f );
-        INIT_FLOAT_PARM( AOFACTOR, 1.0f );
-        INIT_FLOAT_PARM( SSAOFACTOR, 1.0f );
-        INIT_FLOAT_PARM( SSSINTENSITY, 1.0f );
-        INIT_FLOAT_PARM( SSSPOWERSCALE, 1.0f );
+        InitIntParam( BUMPFRAME, params, 0 );
 
-        if (!params[SSSCOLOR]->IsDefined())
-        {
-            Vector color(1, 1, 1);
-            params[SSSCOLOR]->SetVecValue(color.Base(), 3);
-        }
+        InitFloatParam( METALNESSFACTOR, params, 1.0f );
+        InitFloatParam( ROUGHNESSFACTOR, params, 1.0f );
+        InitFloatParam( EMISSIVEFACTOR, params, 1.0f );
+        InitFloatParam( SPECULARFACTOR, params, 1.0f );
+        InitFloatParam( AOFACTOR, params, 1.0f );
+        InitFloatParam( SSAOFACTOR, params, 1.0f );
+        InitFloatParam( SSSINTENSITY, params, 1.0f );
+        InitFloatParam( SSSPOWERSCALE, params, 1.0f );
+
+        InitVecParam( SSSCOLOR, params, 1, 1, 1 );
     };
 
     // Define shader fallback
@@ -529,7 +530,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             // Setting up normal map
             if (bHasNormalTexture)
             {
-                BindTexture(SAMPLER_NORMAL, info.bumpMap, 0);
+                BindTexture(SAMPLER_NORMAL, info.bumpMap, info.bumpMapFrame);
             }
             else
             {
