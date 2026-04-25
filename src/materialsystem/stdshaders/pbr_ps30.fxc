@@ -205,7 +205,7 @@ float4 main(PS_INPUT i) : COLOR
     // FIXME: Variable Names IV - Same as the above. THIS IS A *decompressed* Normal Map in TANGENT SPACE
     // So far we have "textureNormal", "normalTexel", below this is $normal" (???) everyone I talked to that modified this Shader was constantly confused by this
     // FIXME: YIKES it does (x-5)+2 SKULL EMOJI. Oh my god use *2-1 this is not 2003 we use MAD instructions today
-    float3 textureNormal = normalize((normalTexel - float3(0.5, 0.5, 0.5)) * 2);
+    float3 textureNormal = normalTexel * 2.0f - 1.0f;
     float3 normal = normalize(mul(textureNormal, normalBasis)); // World Normal <- Ok so why is isn't it called normalWS or wsNormal?
 
     // Unused Alpha Channel
