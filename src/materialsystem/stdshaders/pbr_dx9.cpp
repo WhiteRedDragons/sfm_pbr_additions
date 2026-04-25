@@ -23,18 +23,25 @@ const Sampler_t SAMPLER_NORMAL = SHADER_SAMPLER1;
 const Sampler_t SAMPLER_ENVMAP = SHADER_SAMPLER2;
 const Sampler_t SAMPLER_LIGHTWARP = SHADER_SAMPLER3;
 const Sampler_t SAMPLER_THICKNESS = SHADER_SAMPLER3;
+
 const Sampler_t SAMPLER_SHADOWDEPTH = SHADER_SAMPLER4;
 const Sampler_t SAMPLER_RANDOMROTATION = SHADER_SAMPLER5;
 const Sampler_t SAMPLER_FLASHLIGHT = SHADER_SAMPLER6;
+
 const Sampler_t SAMPLER_LIGHTMAP = SHADER_SAMPLER7;
+
 const Sampler_t SAMPLER_COMPRESS = SHADER_SAMPLER8;
 const Sampler_t SAMPLER_STRETCH = SHADER_SAMPLER9;
 const Sampler_t SAMPLER_MRAO = SHADER_SAMPLER10;
+
 const Sampler_t SAMPLER_EMISSIVE = SHADER_SAMPLER11;
+
 const Sampler_t SAMPLER_SPECULAR = SHADER_SAMPLER12;
+
 const Sampler_t SAMPLER_SSAO = SHADER_SAMPLER13;
+
 const Sampler_t SAMPLER_BUMPCOMPRESS = SHADER_SAMPLER14;
-const Sampler_t SAMPLER_BUMPSTRETCH = SHADER_SAMPLER15;
+const Sampler_t SAMPLER_BUMPSTRETCH = SHADER_SAMPLER12;
 
 // Convars
 static ConVar mat_fullbright("mat_fullbright", "0", FCVAR_CHEAT);
@@ -369,20 +376,20 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             // Setting up static vertex shader
             DECLARE_STATIC_VERTEX_SHADER(pbr_vs30);
             SET_STATIC_VERTEX_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
-            SET_STATIC_VERTEX_SHADER_COMBO(LIGHTMAPPED, bLightMapped);
+//          SET_STATIC_VERTEX_SHADER_COMBO(LIGHTMAPPED, bLightMapped);
             SET_STATIC_VERTEX_SHADER(pbr_vs30);
 
             // Setting up static pixel shader
             DECLARE_STATIC_PIXEL_SHADER(pbr_ps30);
             SET_STATIC_PIXEL_SHADER_COMBO(FLASHLIGHT, bHasFlashlight);
             SET_STATIC_PIXEL_SHADER_COMBO(FLASHLIGHTDEPTHFILTERMODE, nShadowFilterMode); // TODO: Check if the ATI Shadow Format Issue was fixed on SFM
-            SET_STATIC_PIXEL_SHADER_COMBO(LIGHTMAPPED, bLightMapped);
+//            SET_STATIC_PIXEL_SHADER_COMBO(LIGHTMAPPED, 0); // bLightMapped
             SET_STATIC_PIXEL_SHADER_COMBO(USEENVAMBIENT, bUseEnvAmbient);
             SET_STATIC_PIXEL_SHADER_COMBO(EMISSIVE, bHasEmissionTexture); // FIXME: Make additively rendered pass to save on Samplers
-            SET_STATIC_PIXEL_SHADER_COMBO(SPECULAR, bHasSpecularTexture);
+//            SET_STATIC_PIXEL_SHADER_COMBO(SPECULAR, 0); // bHasSpecularTexture
             SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
             SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
-            SET_STATIC_PIXEL_SHADER_COMBO(LIGHTWARPTEXTURE, bLightwarpTexture);
+//            SET_STATIC_PIXEL_SHADER_COMBO(LIGHTWARPTEXTURE, 0); // bLightwarpTexture
             SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
             SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
             SET_STATIC_PIXEL_SHADER(pbr_ps30);

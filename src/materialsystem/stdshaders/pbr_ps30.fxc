@@ -13,13 +13,13 @@
 // FIXME: A lot of the non SPECULAR Code is still ran under SPECULAR. Just make this a separate Shader honestly
 // STATIC: "FLASHLIGHT"                 "0..1"
 // STATIC: "FLASHLIGHTDEPTHFILTERMODE"  "0..2"
-// STATIC: "LIGHTMAPPED"                "0..1"
+// @STATIC: "LIGHTMAPPED"                "0..0"
 // STATIC: "USEENVAMBIENT"              "0..1"
 // STATIC: "EMISSIVE"                   "0..1"
-// STATIC: "SPECULAR"                   "0..1"
+// @STATIC: "SPECULAR"                   "0..0"
 // STATIC: "PARALLAXOCCLUSION"          "0..1"
 // STATIC: "WORLD_NORMAL"				"0..1"
-// STATIC: "LIGHTWARPTEXTURE"			"0..1"
+// @STATIC: "LIGHTWARPTEXTURE"			"0..0"
 // STATIC: "WRINKLEMAP"					"0..1"
 // STATIC: "SUBSURFACESCATTERING"		"0..1"
 

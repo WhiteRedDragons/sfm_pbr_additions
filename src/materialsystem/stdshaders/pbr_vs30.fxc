@@ -5,7 +5,7 @@
 //==================================================================================================
 
 // STATIC: "WORLD_NORMAL"			    "0..1"
-// STATIC: "LIGHTMAPPED"                "0..1"
+// @STATIC: "LIGHTMAPPED"                "0..1"
 
 // DYNAMIC: "COMPRESSED_VERTS"          "0..1"
 // DYNAMIC: "DOWATERFOG"                "0..1"

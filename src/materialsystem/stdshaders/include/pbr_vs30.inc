@@ -6,10 +6,8 @@
 class pbr_vs30_Static_Index
 {
 	unsigned int m_nWORLD_NORMAL : 2;
-	unsigned int m_nLIGHTMAPPED : 2;
 #ifdef _DEBUG
 	bool m_bWORLD_NORMAL : 1;
-	bool m_bLIGHTMAPPED : 1;
 #endif	// _DEBUG
 public:
 	void SetWORLD_NORMAL( int i )
@@ -21,33 +19,22 @@ public:
 #endif	// _DEBUG
 	}
 
-	void SetLIGHTMAPPED( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nLIGHTMAPPED = i;
-#ifdef _DEBUG
-		m_bLIGHTMAPPED = true;
-#endif	// _DEBUG
-	}
-
 	pbr_vs30_Static_Index(  )
 	{
 		m_nWORLD_NORMAL = 0;
-		m_nLIGHTMAPPED = 0;
 #ifdef _DEBUG
 		m_bWORLD_NORMAL = false;
-		m_bLIGHTMAPPED = false;
 #endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		Assert( m_bWORLD_NORMAL && m_bLIGHTMAPPED );
-		return ( 40 * m_nWORLD_NORMAL ) + ( 80 * m_nLIGHTMAPPED ) + 0;
+		Assert( m_bWORLD_NORMAL );
+		return ( 40 * m_nWORLD_NORMAL ) + 0;
 	}
 };
 
-#define shaderStaticTest_pbr_vs30 vsh_forgot_to_set_static_WORLD_NORMAL + vsh_forgot_to_set_static_LIGHTMAPPED
+#define shaderStaticTest_pbr_vs30 vsh_forgot_to_set_static_WORLD_NORMAL
 
 
 class pbr_vs30_Dynamic_Index

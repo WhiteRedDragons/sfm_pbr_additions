@@ -29,25 +29,19 @@ class pbr_ps30_Static_Index
 {
 	unsigned int m_nFLASHLIGHT : 2;
 	unsigned int m_nFLASHLIGHTDEPTHFILTERMODE : 2;
-	unsigned int m_nLIGHTMAPPED : 2;
 	unsigned int m_nUSEENVAMBIENT : 2;
 	unsigned int m_nEMISSIVE : 2;
-	unsigned int m_nSPECULAR : 2;
 	unsigned int m_nPARALLAXOCCLUSION : 2;
 	unsigned int m_nWORLD_NORMAL : 2;
-	unsigned int m_nLIGHTWARPTEXTURE : 2;
 	unsigned int m_nWRINKLEMAP : 2;
 	unsigned int m_nSUBSURFACESCATTERING : 2;
 #ifdef _DEBUG
 	bool m_bFLASHLIGHT : 1;
 	bool m_bFLASHLIGHTDEPTHFILTERMODE : 1;
-	bool m_bLIGHTMAPPED : 1;
 	bool m_bUSEENVAMBIENT : 1;
 	bool m_bEMISSIVE : 1;
-	bool m_bSPECULAR : 1;
 	bool m_bPARALLAXOCCLUSION : 1;
 	bool m_bWORLD_NORMAL : 1;
-	bool m_bLIGHTWARPTEXTURE : 1;
 	bool m_bWRINKLEMAP : 1;
 	bool m_bSUBSURFACESCATTERING : 1;
 #endif	// _DEBUG
@@ -70,15 +64,6 @@ public:
 #endif	// _DEBUG
 	}
 
-	void SetLIGHTMAPPED( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nLIGHTMAPPED = i;
-#ifdef _DEBUG
-		m_bLIGHTMAPPED = true;
-#endif	// _DEBUG
-	}
-
 	void SetUSEENVAMBIENT( int i )
 	{
 		Assert( i >= 0 && i <= 1 );
@@ -97,15 +82,6 @@ public:
 #endif	// _DEBUG
 	}
 
-	void SetSPECULAR( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nSPECULAR = i;
-#ifdef _DEBUG
-		m_bSPECULAR = true;
-#endif	// _DEBUG
-	}
-
 	void SetPARALLAXOCCLUSION( int i )
 	{
 		Assert( i >= 0 && i <= 1 );
@@ -121,15 +97,6 @@ public:
 		m_nWORLD_NORMAL = i;
 #ifdef _DEBUG
 		m_bWORLD_NORMAL = true;
-#endif	// _DEBUG
-	}
-
-	void SetLIGHTWARPTEXTURE( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nLIGHTWARPTEXTURE = i;
-#ifdef _DEBUG
-		m_bLIGHTWARPTEXTURE = true;
 #endif	// _DEBUG
 	}
 
@@ -155,25 +122,19 @@ public:
 	{
 		m_nFLASHLIGHT = 0;
 		m_nFLASHLIGHTDEPTHFILTERMODE = 0;
-		m_nLIGHTMAPPED = 0;
 		m_nUSEENVAMBIENT = 0;
 		m_nEMISSIVE = 0;
-		m_nSPECULAR = 0;
 		m_nPARALLAXOCCLUSION = 0;
 		m_nWORLD_NORMAL = 0;
-		m_nLIGHTWARPTEXTURE = 0;
 		m_nWRINKLEMAP = 0;
 		m_nSUBSURFACESCATTERING = 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = false;
 		m_bFLASHLIGHTDEPTHFILTERMODE = false;
-		m_bLIGHTMAPPED = false;
 		m_bUSEENVAMBIENT = false;
 		m_bEMISSIVE = false;
-		m_bSPECULAR = false;
 		m_bPARALLAXOCCLUSION = false;
 		m_bWORLD_NORMAL = false;
-		m_bLIGHTWARPTEXTURE = false;
 		m_bWRINKLEMAP = false;
 		m_bSUBSURFACESCATTERING = false;
 #endif	// _DEBUG
@@ -181,16 +142,13 @@ public:
 
 	int GetIndex() const
 	{
-		Assert( m_bFLASHLIGHT && m_bFLASHLIGHTDEPTHFILTERMODE && m_bLIGHTMAPPED && m_bUSEENVAMBIENT && m_bEMISSIVE && m_bSPECULAR && m_bPARALLAXOCCLUSION && m_bWORLD_NORMAL && m_bLIGHTWARPTEXTURE && m_bWRINKLEMAP && m_bSUBSURFACESCATTERING );
+		Assert( m_bFLASHLIGHT && m_bFLASHLIGHTDEPTHFILTERMODE && m_bUSEENVAMBIENT && m_bEMISSIVE && m_bPARALLAXOCCLUSION && m_bWORLD_NORMAL && m_bWRINKLEMAP && m_bSUBSURFACESCATTERING );
 		AssertMsg( !( ( m_nFLASHLIGHT == 0 ) && ( m_nFLASHLIGHTDEPTHFILTERMODE != 0 ) ), "Invalid combo combination ( ( FLASHLIGHT == 0 ) && ( FLASHLIGHTDEPTHFILTERMODE != 0 ) )" );
-		AssertMsg( !( ( m_nWRINKLEMAP != 0 ) && ( ( m_nPARALLAXOCCLUSION != 0 ) || ( m_nLIGHTMAPPED != 0 ) ) ), "Invalid combo combination ( ( WRINKLEMAP != 0 ) && ( ( PARALLAXOCCLUSION != 0 ) || ( LIGHTMAPPED != 0 ) ) )" );
-		AssertMsg( !( ( m_nSUBSURFACESCATTERING != 0 ) && ( m_nLIGHTWARPTEXTURE != 0 ) ), "Invalid combo combination ( ( SUBSURFACESCATTERING != 0 ) && ( LIGHTWARPTEXTURE != 0 ) )" );
-		AssertMsg( !( ( m_nSUBSURFACESCATTERING != 0 ) && ( ( m_nLIGHTMAPPED != 0 ) || ( m_nPARALLAXOCCLUSION != 0 ) ) ), "Invalid combo combination ( ( SUBSURFACESCATTERING != 0 ) && ( ( LIGHTMAPPED != 0 ) || ( PARALLAXOCCLUSION != 0 ) ) )" );
-		return ( 240 * m_nFLASHLIGHT ) + ( 480 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 1440 * m_nLIGHTMAPPED ) + ( 2880 * m_nUSEENVAMBIENT ) + ( 5760 * m_nEMISSIVE ) + ( 11520 * m_nSPECULAR ) + ( 23040 * m_nPARALLAXOCCLUSION ) + ( 46080 * m_nWORLD_NORMAL ) + ( 92160 * m_nLIGHTWARPTEXTURE ) + ( 184320 * m_nWRINKLEMAP ) + ( 368640 * m_nSUBSURFACESCATTERING ) + 0;
+		return ( 240 * m_nFLASHLIGHT ) + ( 480 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 1440 * m_nUSEENVAMBIENT ) + ( 2880 * m_nEMISSIVE ) + ( 5760 * m_nPARALLAXOCCLUSION ) + ( 11520 * m_nWORLD_NORMAL ) + ( 23040 * m_nWRINKLEMAP ) + ( 46080 * m_nSUBSURFACESCATTERING ) + 0;
 	}
 };
 
-#define shaderStaticTest_pbr_ps30 psh_forgot_to_set_static_FLASHLIGHT + psh_forgot_to_set_static_FLASHLIGHTDEPTHFILTERMODE + psh_forgot_to_set_static_LIGHTMAPPED + psh_forgot_to_set_static_USEENVAMBIENT + psh_forgot_to_set_static_EMISSIVE + psh_forgot_to_set_static_SPECULAR + psh_forgot_to_set_static_PARALLAXOCCLUSION + psh_forgot_to_set_static_WORLD_NORMAL + psh_forgot_to_set_static_LIGHTWARPTEXTURE + psh_forgot_to_set_static_WRINKLEMAP + psh_forgot_to_set_static_SUBSURFACESCATTERING
+#define shaderStaticTest_pbr_ps30 psh_forgot_to_set_static_FLASHLIGHT + psh_forgot_to_set_static_FLASHLIGHTDEPTHFILTERMODE + psh_forgot_to_set_static_USEENVAMBIENT + psh_forgot_to_set_static_EMISSIVE + psh_forgot_to_set_static_PARALLAXOCCLUSION + psh_forgot_to_set_static_WORLD_NORMAL + psh_forgot_to_set_static_WRINKLEMAP + psh_forgot_to_set_static_SUBSURFACESCATTERING
 
 
 class pbr_ps30_Dynamic_Index
