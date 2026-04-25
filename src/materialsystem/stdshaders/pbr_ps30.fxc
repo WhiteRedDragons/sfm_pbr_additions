@@ -182,14 +182,14 @@ float4 main(PS_INPUT i) : COLOR
 		float4 stretchColor = tex2D(StretchSampler, correctedTexCoord);
 
 		// Apply wrinkle blend to only RGB
-		albedo.rgb =  (textureAmount * albedo) 
+		albedo     =  (textureAmount * albedo) 
 					+ (wrinkleAmount * wrinkleColor) 
 					+ (stretchAmount * stretchColor);
 	}
 #endif
 	
     // FIXME: Variable Names II - This is a Tint, this is not "BaseColor" which is a dedicated Term in PBR to a TEXTURE
-    albedo.xyz *= g_BaseColor;
+    albedo.rgb *= g_BaseColor.rgb;
 	
     // FIXME: Variable Names III - This is a TANGENT SPACE NORMAL MAP not "NORMAL TEXEL" 
 	float3 normalTexel = tex2D(NormalTextureSampler, correctedTexCoord).xyz;
@@ -198,7 +198,9 @@ float4 main(PS_INPUT i) : COLOR
 	{
 		float3 wrinkleNormal = tex2D(NormalWrinkleSampler, correctedTexCoord).xyz;
 		float3 stretchNormal = tex2D(NormalStretchSampler, correctedTexCoord).xyz;
-		normalTexel = textureAmount * normalTexel + wrinkleAmount * wrinkleNormal + stretchAmount * stretchNormal;
+		normalTexel =       textureAmount * normalTexel
+                          + wrinkleAmount * wrinkleNormal
+                          + stretchAmount * stretchNormal;
 	}
 #endif
 	
@@ -352,7 +354,7 @@ float4 main(PS_INPUT i) : COLOR
         float distSquared = dot(delta, delta);
         float dist = sqrt(distSquared);
 
-        float3 flashlightColor = tex2D(FlashlightSampler, vProjCoords.xy);
+        float3 flashlightColor = tex2D(FlashlightSampler, vProjCoords.xy).rgb;
         flashlightColor *= cFlashlightColor.xyz;
 		
 		float fAtten = saturate(dot(g_FlashlightAttenuationFactors.xyz, float3(1.0, 1.0 / dist, 1.0 / distSquared)));
