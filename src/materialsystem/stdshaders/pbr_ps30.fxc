@@ -107,7 +107,7 @@ sampler LightmapSampler             : register(s7);     // Lightmap
 sampler WrinkleSampler				: register(s8);		// Compression base
 sampler StretchSampler				: register(s9);		// Expansion base
 sampler NormalWrinkleSampler		: register(s14);	// Compression normal
-sampler NormalStretchSampler		: register(s15);	// Expansion normal
+sampler NormalStretchSampler		: register(s12);	// Expansion normal
 #endif
 sampler MRAOTextureSampler          : register(s10);    // MRAO texture
 #if EMISSIVE

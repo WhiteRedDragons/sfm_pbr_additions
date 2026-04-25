@@ -172,9 +172,9 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
         if (params[COMPRESS]->IsDefined())
         {
             LoadTexture(COMPRESS, TEXTUREFLAGS_SRGB);
-            LoadTexture(BUMPCOMPRESS);
+            LoadBumpMap(BUMPCOMPRESS);
             LoadTexture(STRETCH, TEXTUREFLAGS_SRGB);
-            LoadTexture(BUMPSTRETCH);
+            LoadBumpMap(BUMPSTRETCH);
         }
 
         // FIXME3: Half of these Flags are unneeded, filter them out
@@ -332,8 +332,8 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
                 pShaderShadow->EnableSRGBRead(SAMPLER_STRETCH, true);
                 pShaderShadow->EnableTexture(SAMPLER_BUMPCOMPRESS, true); 
                 pShaderShadow->EnableSRGBRead(SAMPLER_BUMPCOMPRESS, false);
-                pShaderShadow->EnableTexture(SAMPLER_BUMPCOMPRESS, true); 
-                pShaderShadow->EnableSRGBRead(SAMPLER_BUMPCOMPRESS, false);
+//              pShaderShadow->EnableTexture(SAMPLER_BUMPSTRETCH, true); 
+//              pShaderShadow->EnableSRGBRead(SAMPLER_BUMPSTRETCH, false);
             }
 
             // Enabling sRGB writing
