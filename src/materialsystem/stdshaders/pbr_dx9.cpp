@@ -332,8 +332,8 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
                 pShaderShadow->EnableSRGBRead(SAMPLER_STRETCH, true);
                 pShaderShadow->EnableTexture(SAMPLER_BUMPCOMPRESS, true); 
                 pShaderShadow->EnableSRGBRead(SAMPLER_BUMPCOMPRESS, false);
-//              pShaderShadow->EnableTexture(SAMPLER_BUMPSTRETCH, true); 
-//              pShaderShadow->EnableSRGBRead(SAMPLER_BUMPSTRETCH, false);
+                pShaderShadow->EnableTexture(SAMPLER_BUMPSTRETCH, true); 
+                pShaderShadow->EnableSRGBRead(SAMPLER_BUMPSTRETCH, false);
             }
 
             // Enabling sRGB writing
