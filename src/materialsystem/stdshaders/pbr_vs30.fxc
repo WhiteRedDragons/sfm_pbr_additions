@@ -41,14 +41,11 @@ struct VS_INPUT
 struct VS_OUTPUT
 {
 	float4 ProjPos                  : POSITION;
-	float4 WorldPos_ProjPosZ        : TEXCOORD3; // Always need Pos and Fog
+	float4 WorldPos_ProjPosZ        : TEXCOORD0; // Always need Pos and Fog
+	float2 TexCoord                 : TEXCOORD1;
+	float4 LightAttenuations		: TEXCOORD2;
 	
-	float2 TexCoord                 : TEXCOORD0;
-	
-	float4 LightAttenuations		: TEXCOORD1;
-	
-	
-	float4 ProjPosXY_WrinkleWeight	: TEXCOORD4; // wrinkle weight in .z
+	float4 ProjPosXYW_WrinkleWeight	: TEXCOORD4; // wrinkle weight in .w
 	
 #if (LIGHTMAPPED || WORLD_NORMAL)
 	float4 lightmapTexCoord1And2    : TEXCOORD5;
@@ -102,8 +99,9 @@ VS_OUTPUT main( const VS_INPUT v )
 	float4 vProjPos = mul(float4(f3WorldPos, 1), cViewProj);
     o.ProjPos = vProjPos;
 
-    o.ProjPosXY_WrinkleWeight.xy = vProjPos.xy;
-    o.ProjPosXY_WrinkleWeight.z = f1WrinkleWeights;
+    o.ProjPosXYW_WrinkleWeight.xy = vProjPos.xy;
+    o.ProjPosXYW_WrinkleWeight.z = vProjPos.w;
+    o.ProjPosXYW_WrinkleWeight.w = f1WrinkleWeights;
 	
 	// Needed for water fog alpha and diffuse lighting 
     o.WorldPos_ProjPosZ.xyz = f3WorldPos;

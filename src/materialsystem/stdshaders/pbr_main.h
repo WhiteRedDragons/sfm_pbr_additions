@@ -54,7 +54,7 @@ const float4x4 xmFlashlightWorldToLight : register(PSREG_UBERLIGHT_WORLD_TO_LIGH
 // Instead of filling the empty registers at the bottom these are just way above the Rest
 const float4 cMRAOControls			: register(PSREG_PBR_MRAO_FACTORS); // Metalness, roughness, AO, SSAO factor
 #define g_f3MRAOBias (cMRAOControls.xyz)
-#define g_f1SSAOFactor (cMRAOControls.w)
+#define g_f1MicroShadowFactor (cMRAOControls.w)
 
 const float4 cVariousControls		: register(PSREG_PBR_EXTRA_FACTORS); // Emissive, specular factor, SSS intensity, SSS power scale
 #define g_f1EmissiveFactor (cVariousControls.x)
@@ -100,10 +100,10 @@ sampler Sampler_SSAO				: register(s13);	 // SFM SSAO sampler
 struct PS_INPUT
 {
 	float2 vPos : VPOS;
-	float2 TexCoord : TEXCOORD0;
-	float4 LightAttenuations : TEXCOORD1;
-	float3 WorldPos : TEXCOORD3;
-	float4 ProjPosXYZ_Wrinkle : TEXCOORD4; // wrinkle weight in w
+	float4 WorldPos_ProjPosZ : TEXCOORD0; // Always need Pos and Fog
+	float2 TexCoord : TEXCOORD1;
+	float4 LightAttenuations : TEXCOORD2;
+	float4 ProjPosXYW_WrinkleWeight : TEXCOORD4; // wrinkle weight in w
 
 	// FIXME: Not used on Models
 	float4 LightmapTexCoord1And2 : TEXCOORD5;
@@ -134,7 +134,10 @@ float4 main(PS_INPUT i) : COLOR
 		#define EnvAmbientCube cAmbientCube
 	#endif
 
-	float3 f3WorldPos = i.WorldPos;
+	float3 f3WorldPos = i.WorldPos_ProjPosZ.xyz;
+	
+	float3 f3ProjPos = float3(i.ProjPosXYW_WrinkleWeight.xy, i.WorldPos_ProjPosZ.w);
+	f3ProjPos.xy /= i.ProjPosXYW_WrinkleWeight.z; // Perspective Divide
 
 	// Use a proper TBN Matrix instead of the cursed and broken Screenspace Reconstructed Tangents
 	float3x3 xmTBN = float3x3(i.Tangent, i.Bitangent, i.Normal);
@@ -154,7 +157,7 @@ float4 main(PS_INPUT i) : COLOR
 	
 	float f1WrinkleAmount, f1StretchAmount, f1TextureAmount;
 	#if WRINKLEMAP
-		float f1WrinkleWeight = i.ProjPosXYZ_Wrinkle.w;
+		float f1WrinkleWeight = i.ProjPosXYW_WrinkleWeight.w;
 	
 		f1WrinkleAmount = saturate(-f1WrinkleWeight);	// One of these two is zero
 		f1StretchAmount = saturate(f1WrinkleWeight);	// while the other is in the 0..1 range
@@ -208,8 +211,11 @@ float4 main(PS_INPUT i) : COLOR
 	#endif
 
 	// SSAO Application
-	float f1SSAO = tex2Dlod(Sampler_SSAO, float4(ComputeScreenPos(i.vPos), 0.0f, 0.0f)).r;
-	f1SSAO = lerp(1.0f, f1SSAO, g_f1SSAOFactor);
+	f3ProjPos.y *= -1.0f; // Flip Y for DirectX
+	f3ProjPos.xy = f3ProjPos.xy * 0.5f + 0.5f; // Linearize for UV
+	float f1SSAO = tex2Dlod(Sampler_SSAO, float4(f3ProjPos.xy, 0.0f, 0.0f)).r;
+
+	// Merge our AO with the SSAO
 	f1AmbientOcclusion = min(f1AmbientOcclusion, f1SSAO);
 	
 	// Creation was non-normalized so normalize it now
@@ -229,9 +235,6 @@ float4 main(PS_INPUT i) : COLOR
 		float3 f3DiffuseColor = (1.0f - f1Metalness) * f4BaseColor.rgb;
 		float3 f3SpecularColor = lerp(0.04f, f4BaseColor.rgb, f1Metalness);
 	#endif
-	
-	// TODO: Maybe make it clearer that this is ProjPos.xy and ProjPos.w?
-	float3 f3ProjPos = i.ProjPosXYZ_Wrinkle.xyz;
 
 	//==================================================================================================
 	// Indirect Lighting
@@ -298,7 +301,7 @@ float4 main(PS_INPUT i) : COLOR
 			// NOTE: Shadow will be applied by N.L
 			// FIXME: Move into BRDF
 			float f1MicroShadow = ApplyMicroShadow(f1AmbientOcclusion, f3NormalWS, f3LightDir, 1.0f);
-			f3LightColor *= f1MicroShadow;
+			f3LightColor *= lerp(1.0f, f1MicroShadow, g_f1MicroShadowFactor);
 	
 			// Diffuse and Specular
 			f3DirectLighting += calculateLight(f3LightDir, f3LightColor, f3ViewDir,
@@ -358,7 +361,7 @@ float4 main(PS_INPUT i) : COLOR
 	
 		// FIXME: Move into BRDF
 		float f1MicroShadow = ApplyMicroShadow(f1AmbientOcclusion, f3NormalWS, flashLightIn, 1.0f);
-		flashlightColor *= f1MicroShadow;
+		flashLightIntensity *= lerp(1.0f, f1MicroShadow, g_f1MicroShadowFactor);
 	
 		// FIXME: Why is there a saturation here? That doesn't make any sense
 		f3DirectLighting += max(0, calculateLight(flashLightIn, flashLightIntensity, f3ViewDir,

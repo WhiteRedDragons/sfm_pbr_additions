@@ -49,6 +49,8 @@ static ConVar mat_fullbright("mat_fullbright", "0", FCVAR_CHEAT);
 static ConVar mat_specular("mat_specular", "1", FCVAR_NONE);
 static ConVar mat_pbr_parallaxmap("mat_pbr_parallaxmap", "1");
 
+static ConVar pbr_microshadows_globalstrength("pbr_microshadows_globalstrength", "0.50", FCVAR_NONE);
+
 // Beginning the shader
 BEGIN_VS_SHADER(PBR, "PBR shader")
 
@@ -678,7 +680,8 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			// FIXME: Single Parameter not 4
 			float cMRAOFactors[4];
 			params[MRAOBias]->GetVecValue(cMRAOFactors, 4);
-			cMRAOFactors[3] *= flSSAOStrength;
+			cMRAOFactors[3] += pbr_microshadows_globalstrength.GetFloat();
+			cMRAOFactors[3] = clamp(cMRAOFactors[3], 0.0f, 1.0f); // Saturate to avoid Explosions
 			pShaderAPI->SetPixelShaderConstant(PSREG_PBR_MRAO_FACTORS, cMRAOFactors);
 
 			// Emissive, specular factors, SSS intensity and power scale 
