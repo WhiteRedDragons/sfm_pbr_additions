@@ -154,9 +154,19 @@ struct PS_INPUT
 	float4 LightmapTexCoord1And2    : TEXCOORD5; 
 	float4 LightmapTexCoord3        : TEXCOORD6;
 	
-	// FIXME: Use TBN with Tangent, Bitangent, Normal Interpolators
-	float3 Normal              : TEXCOORD2;
+    float3 Tangent : TANGENT;
+    float3 Bitangent : BINORMAL;
+    float3 Normal : NORMAL;
 };
+
+// Source
+// https://advances.realtimerendering.com/other/2016/naughty_dog/NaughtyDog_TechArt_Final.pdf
+float ApplyMicroShadow(float ao, float3 N, float3 L, float shadow)
+{
+    float aperture = 2.0 * ao * ao;
+    float microShadow = saturate(abs(dot(L, N)) + aperture - 1.0f);
+    return shadow * microShadow;
+}
 
 // Entry point
 // FIXME: Move Entry Point and VS Output Struct to a Header
@@ -171,18 +181,14 @@ float4 main(PS_INPUT i) : COLOR
 
     float3 f3WorldPos = i.WorldPos;
 	
-	// FIXME: Screenspace reconstructed Tangents are terrible and cause massive Issues
-	// This is also needlessly expensive
-    float3 f3SurfNormal = normalize(i.Normal);
-	float3 f3SurfTangent;
-	float3 f3SurfBase; 
-	float f1FlipSign;
-    float3x3 xmTBN = compute_tangent_frame(f3SurfNormal, f3WorldPos, i.TexCoord, f3SurfTangent, f3SurfBase, f1FlipSign);
+	// Use a proper TBN Matrix instead of the cursed and broken Screenspace Reconstructed Tangents
+    float3x3 xmTBN = float3x3(i.Tangent, i.Bitangent, i.Normal);
+    float3 f3NormalVertex = i.Normal;
 
     float3 f3ViewDir = g_f3CameraPos - f3WorldPos;
 	
 	#if PARALLAXOCCLUSION
-		float3 f3ViewDirTS = worldToRelative(f3ViewDir, f3SurfTangent, f3SurfBase, f3SurfNormal);
+		float3 f3ViewDirTS = worldToRelative(f3ViewDir, i.Tangent, i.Bitangent, f3NormalVertex);
 		float2 f2TexCoord = parallaxCorrect(i.TexCoord, f3ViewDirTS, f3ViewDir, i.Normal, Sampler_NormalTexture, g_f1ParallaxDepth, g_f1ParallaxCenter);
 	#else
 	    float2 f2TexCoord = i.TexCoord;
@@ -220,11 +226,6 @@ float4 main(PS_INPUT i) : COLOR
     f4BaseColor.rgb *= g_f3Tint;
 		
 	float3 f3NormalTS = f4NormalTS.xyz * 2.0f - 1.0f;
-	
-	// FIXME: DO NOT apply Binormal Sign to the Tangent Space Normal Map that is used for Lightmapped Lighting
-	// The Lightmap is ALREADY in Tangent Space. The Binormal Flip is for world space Normals
-    f3NormalTS.y *= f1FlipSign;
-	
     float3 f3NormalWS = normalize(mul(f3NormalTS, xmTBN));
 
 	// Unused Alpha Channel
@@ -251,24 +252,21 @@ float4 main(PS_INPUT i) : COLOR
 		float1 f1Thickness = tex2D(Sampler_ThicknessTexture, f2TexCoord).r;
 	#endif
 
-	// SSAO samplo
-	// FIXME: The way SSAO is applied here is not correct. Two slight occlusions should not mega darken your surface
-	// FIXME: Declutter the Line
+	// SSAO Application
     float f1SSAO = tex2Dlod(Sampler_SSAO, float4(ComputeScreenPos(i.vPos), 0.0f, 0.0f)).r;
     f1SSAO = lerp(1.0f, f1SSAO, g_f1SSAOFactor);
-    f1AmbientOcclusion *= f1SSAO;
+    f1AmbientOcclusion = min(f1AmbientOcclusion, f1SSAO);
 
-	// FIXME: Variable Names V - Non-Incident **VIEW DIR** this is not a "LIGHT DIRECTION" wtf?
+	// Creation was non-normalized so normalize it now
     f3ViewDir = normalize(f3ViewDir);
 
-	// FIXME: Variable Names VI - This is NdotL, and it has always been called NdotL
+	// N.V
     float f1NdotV = max(0, dot(f3NormalWS, f3ViewDir));
 
 	// This is fine but why tf, do we not use A. The Stock Function for doing this B. the intrinsic reflect() Function
     float3 f3Reflect = 2.0 * f1NdotV * f3NormalWS - f3ViewDir;
 
-	// FIXME: Variable Names VII - Either call it F0 or just call Specular honestly
-	// Like we call the Texture Specular already, just call it Specular ..
+	// Decompress BaseColor
 	#if SPECULAR
 		float3 f3DiffuseColor = f4BaseColor.rgb; // FIXME: Naming
 		float3 f3SpecularColor = f4Specular.rgb;
@@ -342,6 +340,11 @@ float4 main(PS_INPUT i) : COLOR
 			float3 f3LightDir = normalize(PixelShaderGetLightVector(f3WorldPos, cLightInfo, n));
             float3 f3LightColor = PixelShaderGetLightColor(cLightInfo, n) * GetAttenForLight(i.LightAttenuations, n); // Li
 
+			// NOTE: Shadow will be applied by N.L
+			// FIXME: Move into BRDF
+			float f1MicroShadow = ApplyMicroShadow(f1AmbientOcclusion, f3NormalWS, f3LightDir, 1.0f);
+			f3LightColor *= f1MicroShadow;
+	
 			// Diffuse and Specular
             f3DirectLighting += calculateLight(f3LightDir, f3LightColor, f3ViewDir,
 					f3NormalWS, f3SpecularColor, f1Roughness, f1Metalness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp);
@@ -398,6 +401,10 @@ float4 main(PS_INPUT i) : COLOR
 		
 		float3 flashLightIn = normalize(delta);
 
+		// FIXME: Move into BRDF
+		float f1MicroShadow = ApplyMicroShadow(f1AmbientOcclusion, f3NormalWS, flashLightIn, 1.0f);
+		flashlightColor *= f1MicroShadow;
+	
 		// FIXME: Why is there a saturation here? That doesn't make any sense
         f3DirectLighting += max(0, calculateLight(flashLightIn, flashLightIntensity, f3ViewDir,
 				f3NormalWS, f3SpecularColor, f1Roughness, f1Metalness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp));

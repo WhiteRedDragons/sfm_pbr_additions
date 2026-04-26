@@ -547,7 +547,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             // ---
             // Getting fog info
             MaterialFogMode_t fogType = pShaderAPI->GetSceneFogMode();
-            int fogIndex = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z) ? 1 : 0;
+//          int fogIndex = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z) ? 1 : 0;
 
             // Getting skinning info
             int numBones = pShaderAPI->GetCurrentNumBones();
@@ -599,10 +599,10 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
             // Setting up dynamic vertex shader
             DECLARE_DYNAMIC_VERTEX_SHADER(pbr_vs30);
-            SET_DYNAMIC_VERTEX_SHADER_COMBO(DOWATERFOG, fogIndex);
+//          SET_DYNAMIC_VERTEX_SHADER_COMBO(DOWATERFOG, fogIndex);
             SET_DYNAMIC_VERTEX_SHADER_COMBO(SKINNING, numBones > 0);
             SET_DYNAMIC_VERTEX_SHADER_COMBO(COMPRESSED_VERTS, (int)vertexCompression);
-            SET_DYNAMIC_VERTEX_SHADER_COMBO(NUM_LIGHTS, lightState.m_nNumLights);
+//          SET_DYNAMIC_VERTEX_SHADER_COMBO(NUM_LIGHTS, lightState.m_nNumLights);
             SET_DYNAMIC_VERTEX_SHADER(pbr_vs30);
 
             // Setting up dynamic pixel shader

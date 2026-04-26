@@ -5,17 +5,13 @@
 //==================================================================================================
 
 // STATIC: "WORLD_NORMAL"			    "0..1"
-// @STATIC: "LIGHTMAPPED"                "0..1"
-
 // DYNAMIC: "COMPRESSED_VERTS"          "0..1"
-// DYNAMIC: "DOWATERFOG"                "0..1"
 // DYNAMIC: "SKINNING"                  "0..1"
-// DYNAMIC: "NUM_LIGHTS"                "0..4"
 
 #include "common_vs_fxc.h"
 
 static const bool g_bSkinning           = SKINNING ? true : false;
-static const int g_FogType              = DOWATERFOG;
+
 const float4 cBaseTexCoordTransform[2]  : register(SHADER_SPECIFIC_CONST_0);
 
 // Used for SSAO
@@ -26,31 +22,42 @@ const float4 g_vEyeVector				: register(SHADER_SPECIFIC_CONST_8);
 //-----------------------------------------------------------------------------
 struct VS_INPUT
 {
-    // This is all of the stuff that we ever use
-    float4 vPos                     : POSITION;
-    float4 vBoneWeights             : BLENDWEIGHT;
-    float4 vBoneIndices             : BLENDINDICES;
-    float4 vNormal                  : NORMAL;
-    float2 vTexCoord0               : TEXCOORD0;
-    float4 vLightmapTexCoord        : TEXCOORD1;
-    float4 vLightmapTexCoordOffset  : TEXCOORD2;
+	// This is all of the stuff that we ever use
+	float4 vPos                     : POSITION;
+	float4 vBoneWeights             : BLENDWEIGHT;
+	float4 vBoneIndices             : BLENDINDICES;
+	float4 vNormal                  : NORMAL;
+	float2 vTexCoord0               : TEXCOORD0;
+	float4 vLightmapTexCoord        : TEXCOORD1;
+	float4 vLightmapTexCoordOffset  : TEXCOORD2;
 	// Stuff used by flexes
 	float4 vPosFlex					: POSITION1;
 	float3 vNormalFlex				: NORMAL1;
+	
+	float4 vCompressedTangents		: TANGENT;
+	
 };
 
 struct VS_OUTPUT
 {
-    // Stuff that isn't seen by the pixel shader
-    float4 projPosSetup             : POSITION;
-    // Stuff that is seen by the pixel shader
-    float2 baseTexCoord             : TEXCOORD0;
-    float4 lightAtten               : TEXCOORD1;
-    float3 worldNormal              : TEXCOORD2;
-    float3 worldPos                 : TEXCOORD3;
-    float4 projPos_wrinkleWeight    : TEXCOORD4; // wrinkle weight in w
-    float4 lightmapTexCoord1And2    : TEXCOORD5;
-    float4 lightmapTexCoord3        : TEXCOORD6;
+	float4 ProjPos                  : POSITION;
+	float4 WorldPos_ProjPosZ        : TEXCOORD3; // Always need Pos and Fog
+	
+	float2 TexCoord                 : TEXCOORD0;
+	
+	float4 LightAttenuations		: TEXCOORD1;
+	
+	
+	float4 ProjPosXY_WrinkleWeight	: TEXCOORD4; // wrinkle weight in .z
+	
+#if (LIGHTMAPPED || WORLD_NORMAL)
+	float4 lightmapTexCoord1And2    : TEXCOORD5;
+	float4 lightmapTexCoord3        : TEXCOORD6;
+#endif
+	
+	float3 Tangent                  : TANGENT;
+	float3 Bitangent                : BINORMAL;
+	float3 Normal                   : NORMAL;
 };
 
 //-----------------------------------------------------------------------------
@@ -58,7 +65,7 @@ struct VS_OUTPUT
 //-----------------------------------------------------------------------------
 VS_OUTPUT main( const VS_INPUT v )
 {
-    VS_OUTPUT o = ( VS_OUTPUT )0;
+	VS_OUTPUT o = ( VS_OUTPUT )0;
 
 #if LIGHTMAPPED
 	{
@@ -77,58 +84,54 @@ VS_OUTPUT main( const VS_INPUT v )
 	}
 #endif
 
-	float4 vPosition = v.vPos;
-	float3 vNormal;
-	DecompressVertex_Normal(v.vNormal, vNormal);
+	// f4 Tangent because .w contains Binormal Sign
+	float4 f4UnskinnedPosition = v.vPos;
+    float4 f4ObjectTangent;
+	float3 f3ObjectNormal;
+    DecompressVertex_NormalTangent(v.vNormal, v.vCompressedTangents, f3ObjectNormal, f4ObjectTangent);
 	
 	// Flexes (shapekeys)
-	float wrinkle;
-	ApplyMorph(v.vPosFlex, v.vNormalFlex, vPosition.xyz, vNormal, wrinkle);
+	float f1WrinkleWeights;
+    ApplyMorph(v.vPosFlex, v.vNormalFlex, f4UnskinnedPosition.xyz, f3ObjectNormal, f1WrinkleWeights);
 
-	// Skinning (bones)
-    float3 worldNormal, worldPos;
-    SkinPositionAndNormal(g_bSkinning, vPosition, vNormal, v.vBoneWeights, v.vBoneIndices, worldPos, worldNormal);
-
-    // Transform into projection space
-    float4 vProjPos = mul(float4(worldPos, 1), cViewProj);
-    o.projPosSetup = vProjPos;
-
-    o.projPos_wrinkleWeight.xyz = vProjPos.xyz;
-	o.projPos_wrinkleWeight.w = wrinkle;
+	// Skinning (Bones) - Note we always want Tangents
+    float3 f3WorldTangent, f3WorldBitangent, f3WorldNormal, f3WorldPos;
+    SkinPositionNormalAndTangentSpace(g_bSkinning, f4UnskinnedPosition, f3ObjectNormal, f4ObjectTangent, v.vBoneWeights, v.vBoneIndices, f3WorldPos, f3WorldNormal, f3WorldTangent, f3WorldBitangent);
 	
-    // Needed for water fog alpha and diffuse lighting 
-    o.worldPos = worldPos;
-    o.worldNormal = normalize(worldNormal);
+	// Transform into projection space
+	float4 vProjPos = mul(float4(f3WorldPos, 1), cViewProj);
+    o.ProjPos = vProjPos;
 
-    // Scalar attenuations for four lights
-    o.lightAtten = float4(0, 0, 0, 0);
-
-    #if (NUM_LIGHTS > 0)
-        o.lightAtten.x = GetVertexAttenForLight(worldPos, 0);
-    #endif
-
-    #if (NUM_LIGHTS > 1)
-        o.lightAtten.y = GetVertexAttenForLight(worldPos, 1);
-    #endif
-
-    #if (NUM_LIGHTS > 2)
-        o.lightAtten.z = GetVertexAttenForLight(worldPos, 2);
-    #endif
-
-    #if (NUM_LIGHTS > 3)
-        o.lightAtten.w = GetVertexAttenForLight(worldPos, 3);
-    #endif
+    o.ProjPosXY_WrinkleWeight.xy = vProjPos.xy;
+    o.ProjPosXY_WrinkleWeight.z = f1WrinkleWeights;
+	
+	// Needed for water fog alpha and diffuse lighting 
+    o.WorldPos_ProjPosZ.xyz = f3WorldPos;
+    o.WorldPos_ProjPosZ.w = vProjPos.z;
+	
+	// Base texture coordinate transform
+	// Force fill .zw with 1.0f to get the full Transform
+    float4 f4UnmodifiedTexCoord = float4(v.vTexCoord0, 1.0f, 1.0f);
+    o.TexCoord.x = dot(f4UnmodifiedTexCoord, cBaseTexCoordTransform[0]);
+    o.TexCoord.y = dot(f4UnmodifiedTexCoord, cBaseTexCoordTransform[1]);
+	
+	// Always compute these
+	o.LightAttenuations.x = GetVertexAttenForLight(f3WorldPos, 0);
+	o.LightAttenuations.y = GetVertexAttenForLight(f3WorldPos, 1);
+	o.LightAttenuations.z = GetVertexAttenForLight(f3WorldPos, 2);
+    o.LightAttenuations.w = GetVertexAttenForLight(f3WorldPos, 3);
+	
+	// Always normalize because we don't know where the morph path takes us
+    o.Tangent = normalize(f3WorldTangent);
+    o.Bitangent = normalize(f3WorldBitangent);
+    o.Normal = normalize(f3WorldNormal);
 	
 	#if (WORLD_NORMAL)
 	{
 		// Linear depth
-		o.lightmapTexCoord3.w = dot( g_vEyeVector, worldPos.xyz - cEyePos.xyz );
+		o.lightmapTexCoord3.w = dot( g_vEyeVector, f3WorldPos.xyz - cEyePos.xyz );
 	}
 	#endif
 
-    // Base texture coordinate transform
-    o.baseTexCoord.x = dot(v.vTexCoord0, cBaseTexCoordTransform[0]);
-    o.baseTexCoord.y = dot(v.vTexCoord0, cBaseTexCoordTransform[1]);
-
-    return o;
+	return o;
 }
