@@ -32,19 +32,19 @@ class CPerInstanceContextData;
 // Note: if you add to these, add to s_StandardParams in CBaseShader.cpp
 enum ShaderMaterialVars_t
 {
-	FLAGS = 0,
-	FLAGS_DEFINED,	// mask indicating if the flag was specified
-	FLAGS2,
-	FLAGS_DEFINED2,
-	COLOR,
-	ALPHA,
-	BASETEXTURE,
-	FRAME,
-	BASETEXTURETRANSFORM,
-	FLASHLIGHTTEXTURE,
-	FLASHLIGHTTEXTUREFRAME,
-	COLOR2,
-	SRGBTINT,
+	Flags = 0,
+	Flags_Defined,	// mask indicating if the flag was specified
+	Flags2,
+	Flags_Defined2,
+	Color1,
+	Alpha,
+	BaseTexture,
+	Frame,
+	BaseTextureTransform,
+	FlashlightTexture,
+	FlashlightTextureFrame,
+	Color2,
+	sRGBTint,
 
 	NUM_SHADER_MATERIAL_VARS
 };
@@ -246,7 +246,7 @@ private:
 //-----------------------------------------------------------------------------
 inline int CBaseShader::CurrentMaterialVarFlags() const
 {
-	return s_ppParams[FLAGS]->GetIntValue();
+	return s_ppParams[Flags]->GetIntValue();
 }
 
 //-----------------------------------------------------------------------------
@@ -254,7 +254,7 @@ inline int CBaseShader::CurrentMaterialVarFlags() const
 //-----------------------------------------------------------------------------
 inline int CBaseShader::CurrentMaterialVarFlags2() const
 {
-	return s_ppParams[FLAGS2]->GetIntValue();
+	return s_ppParams[Flags2]->GetIntValue();
 }
 
 //-----------------------------------------------------------------------------

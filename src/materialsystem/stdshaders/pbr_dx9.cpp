@@ -54,33 +54,33 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
     // Setting up vmt parameters
     // FIXME: Capslocked Parameter Names are hard to read and this is only a thing because everyone copies the Code from Valve
     BEGIN_SHADER_PARAMS;
-        SHADER_PARAM(ALPHATESTREFERENCE, SHADER_PARAM_TYPE_FLOAT, "0", "");
-        SHADER_PARAM(ENVMAP, SHADER_PARAM_TYPE_ENVMAP, "", "Set the cubemap for this material.");
-        SHADER_PARAM(MRAOTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Texture with metalness in R, roughness in G, ambient occlusion in B.");
-        SHADER_PARAM(EMISSIONTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Emission texture");
-        SHADER_PARAM(NORMALTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture (deprecated, use $bumpmap)");
-        SHADER_PARAM(BUMPMAP, SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture");
-        SHADER_PARAM(BUMPFRAME, SHADER_PARAM_TYPE_INTEGER, "0", "Frame number for $bumpmap")
-        SHADER_PARAM(USEENVAMBIENT, SHADER_PARAM_TYPE_BOOL, "0", "Use the cubemaps to compute ambient light.");
-        SHADER_PARAM(SPECULARTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Specular F0 RGB map");
-        SHADER_PARAM(LIGHTWARPTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Lightwarp Texture" );
-        SHADER_PARAM(THICKNESSTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Thickness map for SSS" );
-        SHADER_PARAM(PARALLAX, SHADER_PARAM_TYPE_BOOL, "0", "Use Parallax Occlusion Mapping.");
-        SHADER_PARAM(PARALLAXDEPTH, SHADER_PARAM_TYPE_FLOAT, "0.0030", "Depth of the Parallax Map");
-        SHADER_PARAM(PARALLAXCENTER, SHADER_PARAM_TYPE_FLOAT, "0.5", "Center depth of the Parallax Map");
-        SHADER_PARAM(METALNESSFACTOR, SHADER_PARAM_TYPE_FLOAT, "1.0", "Metalness factor");
-        SHADER_PARAM(ROUGHNESSFACTOR, SHADER_PARAM_TYPE_FLOAT, "1.0", "Roughness factor");
-        SHADER_PARAM(EMISSIVEFACTOR, SHADER_PARAM_TYPE_FLOAT, "1.0", "Emissive factor" );
-        SHADER_PARAM(SPECULARFACTOR, SHADER_PARAM_TYPE_FLOAT, "1.0", "Specular factor" );
-        SHADER_PARAM(AOFACTOR, SHADER_PARAM_TYPE_FLOAT, "1.0", "Ambient occlusion factor");
-        SHADER_PARAM(SSAOFACTOR, SHADER_PARAM_TYPE_FLOAT, "1.0", "Screen space ambient occlusion factor");
+        SHADER_PARAM(AlphaTestReference, SHADER_PARAM_TYPE_FLOAT, "0", "");
+        SHADER_PARAM(EnvMap, SHADER_PARAM_TYPE_ENVMAP, "", "Set the cubemap for this material.");
+        SHADER_PARAM(MRAOTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Texture with metalness in R, roughness in G, ambient occlusion in B.");
+        SHADER_PARAM(EmissionTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Emission texture");
+        SHADER_PARAM(NormalTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture (deprecated, use $bumpmap)");
+        SHADER_PARAM(BumpMap, SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture");
+        SHADER_PARAM(BumpFrame, SHADER_PARAM_TYPE_INTEGER, "0", "Frame number for $bumpmap")
+        SHADER_PARAM(UseEnvAmbient, SHADER_PARAM_TYPE_BOOL, "0", "Use the cubemaps to compute ambient light.");
+        SHADER_PARAM(SpecularTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Specular F0 RGB map");
+        SHADER_PARAM(LightWarpTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Lightwarp Texture" );
+        SHADER_PARAM(ThicknessTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Thickness map for SSS" );
+        SHADER_PARAM(Parallax, SHADER_PARAM_TYPE_BOOL, "0", "Use Parallax Occlusion Mapping.");
+        SHADER_PARAM(ParallaxDepth, SHADER_PARAM_TYPE_FLOAT, "0.0030", "Depth of the Parallax Map");
+        SHADER_PARAM(ParallaxCenter, SHADER_PARAM_TYPE_FLOAT, "0.5", "Center depth of the Parallax Map");
+        SHADER_PARAM(MetalnessFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Metalness factor");
+        SHADER_PARAM(RoughnessFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Roughness factor");
+        SHADER_PARAM(EmissiveFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Emissive factor" );
+        SHADER_PARAM(SpecularFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Specular factor" );
+        SHADER_PARAM(AOFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Ambient occlusion factor");
+        SHADER_PARAM(SSAOFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Screen space ambient occlusion factor");
         SHADER_PARAM(SSSCOLOR, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Subsurface scattering color");
-        SHADER_PARAM(SSSINTENSITY, SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS intensity");
-        SHADER_PARAM(SSSPOWERSCALE, SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS power scale");
-        SHADER_PARAM(COMPRESS, SHADER_PARAM_TYPE_TEXTURE, "", "Compression wrinklemap");
-        SHADER_PARAM(BUMPCOMPRESS, SHADER_PARAM_TYPE_TEXTURE, "", "Stretch bumpmap" );
-        SHADER_PARAM(STRETCH, SHADER_PARAM_TYPE_TEXTURE, "", "Stretch wrinklemap");
-        SHADER_PARAM(BUMPSTRETCH, SHADER_PARAM_TYPE_TEXTURE, "", "Compression bumpmap" );
+        SHADER_PARAM(SSSIntensity, SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS intensity");
+        SHADER_PARAM(SSSPowerScale, SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS power scale");
+        SHADER_PARAM(Compress, SHADER_PARAM_TYPE_TEXTURE, "", "Compression wrinklemap");
+        SHADER_PARAM(BumpCompress, SHADER_PARAM_TYPE_TEXTURE, "", "Stretch bumpmap" );
+        SHADER_PARAM(Stretch, SHADER_PARAM_TYPE_TEXTURE, "", "Stretch wrinklemap");
+        SHADER_PARAM(BumpStretch, SHADER_PARAM_TYPE_TEXTURE, "", "Compression bumpmap" );
     END_SHADER_PARAMS;
 
     // Initializing parameters
@@ -88,53 +88,53 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
     {
         // Fallback for changed parameter
         // NUKE: $NormalTexture, replace with $NormalMap
-        if (params[NORMALTEXTURE]->IsDefined())
-            params[BUMPMAP]->SetStringValue(params[NORMALTEXTURE]->GetStringValue());
+        if (params[NormalTexture]->IsDefined())
+            params[BumpMap]->SetStringValue(params[NormalTexture]->GetStringValue());
 
         // Dynamic lights need a bumpmap
         // FIXME: Use Standard Flat Normal Map in Dynamic State, set this to "..." for Models
         // Setting $BumpMap to something is required or WorldLight based Lighting doesn't work on Models correctly
-        if (!params[BUMPMAP]->IsDefined())
-            params[BUMPMAP]->SetStringValue("dev/flat_normal");
+        if (!params[BumpMap]->IsDefined())
+            params[BumpMap]->SetStringValue("dev/flat_normal");
 
         // Set a good default mrao texture
         // FIXME: Use Standard White Texture with proper Bias Values
-        if (!params[MRAOTEXTURE]->IsDefined())
-            params[MRAOTEXTURE]->SetStringValue("dev/pbr_mraotexture");
+        if (!params[MRAOTexture]->IsDefined())
+            params[MRAOTexture]->SetStringValue("dev/pbr_mraotexture");
 
         // PBR relies heavily on envmaps
         // NOTE: It was not considered that SFM Users use literally black Maps for Scene Building
         // They don't *HAVE* actual Cubemaps
-        if (!params[ENVMAP]->IsDefined())
-            params[ENVMAP]->SetStringValue("env_cubemap");
+        if (!params[EnvMap]->IsDefined())
+            params[EnvMap]->SetStringValue("env_cubemap");
 
         // If using wrinklemaps, all the textures need to be filled in
-        if (params[COMPRESS]->IsDefined() || params[BUMPCOMPRESS]->IsDefined() ||
-            params[STRETCH]->IsDefined() || params[BUMPSTRETCH]->IsDefined())
+        if (params[Compress]->IsDefined() || params[BumpCompress]->IsDefined() ||
+            params[Stretch]->IsDefined() || params[BumpStretch]->IsDefined())
         {
-            if (!params[COMPRESS]->IsDefined())
-                params[COMPRESS]->SetStringValue(params[BASETEXTURE]->GetStringValue());
-            if (!params[BUMPCOMPRESS]->IsDefined())
-                params[BUMPCOMPRESS]->SetStringValue(params[BUMPMAP]->GetStringValue());
+            if (!params[Compress]->IsDefined())
+                params[Compress]->SetStringValue(params[BaseTexture]->GetStringValue());
+            if (!params[BumpCompress]->IsDefined())
+                params[BumpCompress]->SetStringValue(params[BumpMap]->GetStringValue());
         
-            if (!params[STRETCH]->IsDefined())
-                params[STRETCH]->SetStringValue(params[BASETEXTURE]->GetStringValue());
-            if (!params[BUMPSTRETCH]->IsDefined())
-                params[BUMPSTRETCH]->SetStringValue(params[BUMPMAP]->GetStringValue());
+            if (!params[Stretch]->IsDefined())
+                params[Stretch]->SetStringValue(params[BaseTexture]->GetStringValue());
+            if (!params[BumpStretch]->IsDefined())
+                params[BumpStretch]->SetStringValue(params[BumpMap]->GetStringValue());
         }
 
         // NUKE: Default Value is 0 even if you don't set it
-        InitIntParam( BUMPFRAME, params, 0 );
+        InitIntParam( BumpFrame, params, 0 );
 
         // FIXME: Bracket Spacing
-        InitFloatParam( METALNESSFACTOR, params, 1.0f );
-        InitFloatParam( ROUGHNESSFACTOR, params, 1.0f );
-        InitFloatParam( EMISSIVEFACTOR, params, 1.0f );
-        InitFloatParam( SPECULARFACTOR, params, 1.0f );
-        InitFloatParam( AOFACTOR, params, 1.0f );
-        InitFloatParam( SSAOFACTOR, params, 1.0f );
-        InitFloatParam( SSSINTENSITY, params, 1.0f );
-        InitFloatParam( SSSPOWERSCALE, params, 1.0f );
+        InitFloatParam( MetalnessFactor, params, 1.0f );
+        InitFloatParam( RoughnessFactor, params, 1.0f );
+        InitFloatParam( EmissiveFactor, params, 1.0f );
+        InitFloatParam( SpecularFactor, params, 1.0f );
+        InitFloatParam( AOFactor, params, 1.0f );
+        InitFloatParam( SSAOFactor, params, 1.0f );
+        InitFloatParam( SSSIntensity, params, 1.0f );
+        InitFloatParam( SSSPowerScale, params, 1.0f );
 
         // NUKE: This is a Color Param, it's default Value is 1 1 1 if you set it here or not
         InitVecParam( SSSCOLOR, params, 1, 1, 1 );
@@ -149,32 +149,32 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
     SHADER_INIT
     {
         // FIXME: Make dedicated $BaseColor and $NormalMap Parameters
-        LoadTexture(BASETEXTURE, TEXTUREFLAGS_SRGB);
-        LoadBumpMap(BUMPMAP);
+        LoadTexture(BaseTexture, TEXTUREFLAGS_SRGB);
+        LoadBumpMap(BumpMap);
 
         // FIXME2: Make dedicated $Diffuse Texture for "$SpecularTexture" which should be renamed to $Specular honestly
-        LoadTexture(MRAOTEXTURE);
-        LoadTexture(SPECULARTEXTURE, TEXTUREFLAGS_SRGB);
+        LoadTexture(MRAOTexture);
+        LoadTexture(SpecularTexture, TEXTUREFLAGS_SRGB);
 
         int envMapFlags = g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE ? TEXTUREFLAGS_SRGB : 0;
         envMapFlags |= TEXTUREFLAGS_ALL_MIPS;
-        LoadCubeMap(ENVMAP, envMapFlags);
+        LoadCubeMap(EnvMap, envMapFlags);
 
-        LoadTexture(EMISSIONTEXTURE, TEXTUREFLAGS_SRGB);
+        LoadTexture(EmissionTexture, TEXTUREFLAGS_SRGB);
 
         // FIXME: This wasted AN ENTIRE samplers for some Greyscale Information that could be derived from an existing free Color Channel
-        LoadTexture(THICKNESSTEXTURE);
+        LoadTexture(ThicknessTexture);
 
         // NUKE: This is everything but PBR why is this even a Thing?
         // If someone needs this, stop using PBR because this is not PBR
-        LoadTexture(LIGHTWARPTEXTURE);
+        LoadTexture(LightWarpTexture);
 
-        if (params[COMPRESS]->IsDefined())
+        if (params[Compress]->IsDefined())
         {
-            LoadTexture(COMPRESS, TEXTUREFLAGS_SRGB);
-            LoadBumpMap(BUMPCOMPRESS);
-            LoadTexture(STRETCH, TEXTUREFLAGS_SRGB);
-            LoadBumpMap(BUMPSTRETCH);
+            LoadTexture(Compress, TEXTUREFLAGS_SRGB);
+            LoadBumpMap(BumpCompress);
+            LoadTexture(Stretch, TEXTUREFLAGS_SRGB);
+            LoadBumpMap(BumpStretch);
         }
 
         // FIXME3: Half of these Flags are unneeded, filter them out
@@ -207,15 +207,15 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
         bool bIsAlphaTested = IS_FLAG_SET(MATERIAL_VAR_ALPHATEST) != 0; // FIXME: ( != 0) != 0 lol
 
         // Setting up booleans
-        bool bHasBaseTexture = params[BASETEXTURE]->IsTexture();
-        bool bHasNormalTexture = params[BUMPMAP]->IsTexture();
-        bool bHasMraoTexture = params[MRAOTEXTURE]->IsTexture();
-        bool bHasSpecularTexture = !bHasMraoTexture && params[SPECULARTEXTURE]->IsTexture();
-        bool bHasEnvMap = params[ENVMAP]->IsTexture();
-        bool bHasEmissionTexture = params[EMISSIONTEXTURE]->IsTexture();
+        bool bHasBaseTexture = params[BaseTexture]->IsTexture();
+        bool bHasNormalTexture = params[BumpMap]->IsTexture();
+        bool bHasMraoTexture = params[MRAOTexture]->IsTexture();
+        bool bHasSpecularTexture = !bHasMraoTexture && params[SpecularTexture]->IsTexture();
+        bool bHasEnvMap = params[EnvMap]->IsTexture();
+        bool bHasEmissionTexture = params[EmissionTexture]->IsTexture();
 
         // IsDefined() is not real on Shader Draw; This doesn't make any sense
-        bool bHasColor = true; params[COLOR]->IsDefined();
+        bool bHasColor = true; // params[Color1]->IsDefined();
 
         // FIXME: Non-sensical Variable Name, this is bIsModel. Did you know Models can also be lightmapped?
         // FIXME: just nuke Brush Support, who is going to use this on SFM
@@ -223,20 +223,20 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
         // NUKE: Non-sense or force. Why is there two of different ways of deriving Ambient
         // Physically based workarounds
-        bool bUseEnvAmbient = params[USEENVAMBIENT]->GetIntValue();
+        bool bUseEnvAmbient = params[UseEnvAmbient]->GetIntValue();
 
-        bool bThicknessTexture = !bLightMapped && params[THICKNESSTEXTURE]->IsTexture();
+        bool bThicknessTexture = !bLightMapped && params[ThicknessTexture]->IsTexture();
 
         // Can't have lightwarp and SSS together
         // ShiroDkxtro2: Why? Modern LUT-based implementations of SSS use a "LightWarpTexture" for SSS
-        bool bLightwarpTexture = !bThicknessTexture && params[LIGHTWARPTEXTURE]->IsTexture();
+        bool bLightwarpTexture = !bThicknessTexture && params[LightWarpTexture]->IsTexture();
 
         // Only supported on models
-        bool bWrinkleMapping = !bLightMapped && params[COMPRESS]->IsDefined();
+        bool bWrinkleMapping = !bLightMapped && params[Compress]->IsDefined();
 
         // Determining whether we're dealing with a fully opaque material
         // FIXME: Transluceny on PBR is more than just simple Alphablending
-        BlendType_t nBlendType = EvaluateBlendRequirements(BASETEXTURE, true);
+        BlendType_t nBlendType = EvaluateBlendRequirements(BaseTexture, true);
         bool bFullyOpaque = (nBlendType != BT_BLENDADD) && (nBlendType != BT_BLEND) && !bIsAlphaTested;
 
         if (IsSnapshotting())
@@ -246,7 +246,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             {
                 pShaderShadow->EnableAlphaTest(true);
 
-                const float f1AlphaTestReference = params[ALPHATESTREFERENCE]->GetFloatValue();
+                const float f1AlphaTestReference = params[AlphaTestReference]->GetFloatValue();
                 if (f1AlphaTestReference > 0.0f)
                 {
                     pShaderShadow->AlphaFunc(SHADER_ALPHAFUNC_GEQUAL, f1AlphaTestReference);
@@ -261,7 +261,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             }
             else
             {
-                SetDefaultBlendingShadowState(BASETEXTURE, true);
+                SetDefaultBlendingShadowState(BaseTexture, true);
             }
 
             // FIXME: Why is this here and not down there
@@ -358,7 +358,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             }
         
             // FIXME: Move to Param Init why does it need to be here
-            int useParallax = params[PARALLAX]->GetIntValue();
+            int useParallax = params[Parallax]->GetIntValue();
             // Parallax and wrinkle are incompatible
             if (!mat_pbr_parallaxmap.GetBool() || bWrinkleMapping)
             {
@@ -389,7 +389,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 //            SET_STATIC_PIXEL_SHADER_COMBO(SPECULAR, 0); // bHasSpecularTexture
             SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
             SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
-//            SET_STATIC_PIXEL_SHADER_COMBO(LIGHTWARPTEXTURE, 0); // bLightwarpTexture
+//            SET_STATIC_PIXEL_SHADER_COMBO(LightWarpTexture, 0); // bLightwarpTexture
             SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
             SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
             SET_STATIC_PIXEL_SHADER(pbr_ps30);
@@ -428,7 +428,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             // Setting up albedo texture
             if (bHasBaseTexture)
             {
-                BindTexture(SAMPLER_BASETEXTURE, BASETEXTURE, BASETEXTURETRANSFORM);
+                BindTexture(SAMPLER_BASETEXTURE, BaseTexture, Frame);
             }
             else
             {
@@ -440,7 +440,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             Vector4D color( 0, 0, 0, 0 );
             if (bHasColor)
             {
-                params[COLOR]->GetVecValue(color.Base(), 3);
+                params[Color1]->GetVecValue(color.Base(), 3);
             }
             else
             {
@@ -452,7 +452,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             if (bHasEnvMap)
             {  
                 // FIXME: EnvMapFrame
-                BindTexture(SAMPLER_ENVMAP, ENVMAP, 0); // FIXME: Missing Frame Parameter
+                BindTexture(SAMPLER_ENVMAP, EnvMap, 0); // FIXME: Missing Frame Parameter
             }
             else
             {
@@ -463,7 +463,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             // Setting up emissive texture
             if (bHasEmissionTexture)
             {
-                BindTexture(SAMPLER_EMISSIVE, EMISSIONTEXTURE, 0); // FIXME: Missing Frame Parameter
+                BindTexture(SAMPLER_EMISSIVE, EmissionTexture, 0); // FIXME: Missing Frame Parameter
             }
             else
             {
@@ -475,7 +475,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             // NOTE: A default Normal Map is defined in Param Init, but there is still a Fallback here
             if (bHasNormalTexture)
             {
-                BindTexture(SAMPLER_NORMAL, BUMPMAP, BUMPFRAME);
+                BindTexture(SAMPLER_NORMAL, BumpMap, BumpFrame);
             }
             else
             {
@@ -485,7 +485,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             // Setting up mrao map
             if (bHasMraoTexture)
             {
-                BindTexture(SAMPLER_MRAO, MRAOTEXTURE, 0); // FIXME: Missing Frame Parameter
+                BindTexture(SAMPLER_MRAO, MRAOTexture, 0); // FIXME: Missing Frame Parameter
             }
             else
             {
@@ -494,7 +494,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
             if (bHasSpecularTexture)
             {
-                BindTexture(SAMPLER_SPECULAR, SPECULARTEXTURE, 0); // FIXME: Missing Frame Parameter
+                BindTexture(SAMPLER_SPECULAR, SpecularTexture, 0); // FIXME: Missing Frame Parameter
             }
             else
             {
@@ -503,19 +503,19 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
             if (bThicknessTexture)
             {
-                BindTexture(SAMPLER_THICKNESS, THICKNESSTEXTURE, 0); // FIXME: Missing Frame Parameter
+                BindTexture(SAMPLER_THICKNESS, ThicknessTexture, 0); // FIXME: Missing Frame Parameter
             }
             else if (bLightwarpTexture)
             {
-                BindTexture(SAMPLER_LIGHTWARP, LIGHTWARPTEXTURE, 0); // FIXME: Missing Frame Parameter
+                BindTexture(SAMPLER_LIGHTWARP, LightWarpTexture, 0); // FIXME: Missing Frame Parameter
             }
 
             if (bWrinkleMapping)
             {
-                BindTexture(SAMPLER_COMPRESS, COMPRESS, 0); // FIXME: Missing Frame Parameter
-                BindTexture(SAMPLER_STRETCH, STRETCH, 0); // FIXME: Missing Frame Parameter
-                BindTexture(SAMPLER_BUMPCOMPRESS, BUMPCOMPRESS, 0); // FIXME: Missing Frame Parameter
-                BindTexture(SAMPLER_BUMPSTRETCH, BUMPSTRETCH, 0); // FIXME: Missing Frame Parameter
+                BindTexture(SAMPLER_COMPRESS, Compress, 0); // FIXME: Missing Frame Parameter
+                BindTexture(SAMPLER_STRETCH, Stretch, 0); // FIXME: Missing Frame Parameter
+                BindTexture(SAMPLER_BUMPCOMPRESS, BumpCompress, 0); // FIXME: Missing Frame Parameter
+                BindTexture(SAMPLER_BUMPSTRETCH, BumpStretch, 0); // FIXME: Missing Frame Parameter
             }
 
             // Getting the light state
@@ -577,7 +577,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             // FIXME: Add a warning, force people to have an adequate EnvMap Resolution
             // FIXME: Could be stored in Context Data?
             int iEnvMapLOD = 6;
-            auto envTexture = params[ENVMAP]->GetTextureValue();
+            auto envTexture = params[EnvMap]->GetTextureValue();
             if (envTexture)
             {
                 // Get power of 2 of texture width
@@ -625,7 +625,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
             // Setting up base texture transform
             // FIXME: Use a Macro Map for this because I don't trust these random Enums that love to vary across branches
-            SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, BASETEXTURETRANSFORM);
+            SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, BaseTextureTransform);
 
             // FIXME: This is non-sense because we derive metal color from the BaseColor
             // FIXME: Duplicate Texture Bind, happens above for regular BaseTexture
@@ -662,20 +662,20 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
             // FIXME: Single Parameter not 4
             float vMRAOFactors[4] =
             {
-                GetFloatParam( METALNESSFACTOR, params, 1.0f ),
-                GetFloatParam( ROUGHNESSFACTOR, params, 1.0f ),
-                GetFloatParam( AOFACTOR, params, 1.0f ),
-                GetFloatParam( SSAOFACTOR, params, 1.0f ) * flSSAOStrength
+                GetFloatParam( MetalnessFactor, params, 1.0f ),
+                GetFloatParam( RoughnessFactor, params, 1.0f ),
+                GetFloatParam( AOFactor, params, 1.0f ),
+                GetFloatParam( SSAOFactor, params, 1.0f ) * flSSAOStrength
             };
             pShaderAPI->SetPixelShaderConstant(PSREG_PBR_MRAO_FACTORS, vMRAOFactors, 1);
 
             // Emissive, specular factors, SSS intensity and power scale 
             float vExtraFactors[4] =
             {
-                GetFloatParam( EMISSIVEFACTOR, params, 1.0f ),
-                GetFloatParam( SPECULARFACTOR, params, 1.0f ), // Wat? What is the point of $MetalnessFactor if we end up having two Parameters to handle the same Thing
-                GetFloatParam( SSSINTENSITY, params, 1.0f ),
-                GetFloatParam( SSSPOWERSCALE, params, 1.0f )
+                GetFloatParam( EmissiveFactor, params, 1.0f ),
+                GetFloatParam( SpecularFactor, params, 1.0f ), // Wat? What is the point of $MetalnessFactor if we end up having two Parameters to handle the same Thing
+                GetFloatParam( SSSIntensity, params, 1.0f ),
+                GetFloatParam( SSSPowerScale, params, 1.0f )
             };
             pShaderAPI->SetPixelShaderConstant(PSREG_PBR_EXTRA_FACTORS, vExtraFactors, 1);
 
@@ -739,9 +739,9 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
             float flParams[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
             // Parallax Depth (the strength of the effect)
-            flParams[0] = GetFloatParam(PARALLAXDEPTH, params, 3.0f);
+            flParams[0] = GetFloatParam(ParallaxDepth, params, 3.0f);
             // Parallax Center (the height at which it's not moved)
-            flParams[1] = GetFloatParam(PARALLAXCENTER, params, 3.0f);
+            flParams[1] = GetFloatParam(ParallaxCenter, params, 3.0f);
             pShaderAPI->SetPixelShaderConstant(PSREG_SHADER_CONTROLS, flParams, 1);
 
         }

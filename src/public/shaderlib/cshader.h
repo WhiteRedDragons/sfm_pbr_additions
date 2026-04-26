@@ -62,12 +62,12 @@ bool IsUsingGraphics();
 // Typesafe flag setting
 inline void CShader_SetFlags( IMaterialVar **params, MaterialVarFlags_t _flag )
 {
-	params[FLAGS]->SetIntValue( params[FLAGS]->GetIntValue() | (_flag) );
+	params[Flags]->SetIntValue( params[Flags]->GetIntValue() | (_flag) );
 }
 
 inline bool CShader_IsFlagSet( IMaterialVar **params, MaterialVarFlags_t _flag )
 {
-	return ((params[FLAGS]->GetIntValue() & (_flag) ) != 0);
+	return ((params[Flags]->GetIntValue() & (_flag) ) != 0);
 }
 
 #define SET_FLAGS( _flag )		CShader_SetFlags( params, _flag )
@@ -104,12 +104,12 @@ inline bool CShader_IsFlagSet( IMaterialVar **params, MaterialVarFlags_t _flag )
 // Typesafe flag setting
 inline void CShader_SetFlags2( IMaterialVar **params, MaterialVarFlags2_t _flag )
 {
-	params[FLAGS2]->SetIntValue( params[FLAGS2]->GetIntValue() | (_flag) );
+	params[Flags2]->SetIntValue( params[Flags2]->GetIntValue() | (_flag) );
 }
 
 inline bool CShader_IsFlag2Set( IMaterialVar **params, MaterialVarFlags2_t _flag )
 {
-	return ((params[FLAGS2]->GetIntValue() & (_flag) ) != 0);
+	return ((params[Flags2]->GetIntValue() & (_flag) ) != 0);
 }
 
 #define SET_FLAGS2( _flag )		CShader_SetFlags2( params, _flag )
