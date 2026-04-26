@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectName>shader_zmrpbr</ProjectName>
+    <ProjectName>shader_modifiedthexapbr</ProjectName>
     <ProjectGuid>{1A1149D9-CB1B-BF85-19CA-C9C2996BFDE8}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
