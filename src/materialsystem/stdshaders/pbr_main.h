@@ -65,53 +65,52 @@ const float4 cVariousControls		: register(PSREG_PBR_EXTRA_FACTORS); // Emissive,
 const float4 cSSSColor				: register(PSREG_PBR_SSS_COLOR); // Subsurface scattering color
 #define g_f3SSSColor (cSSSColor.rgb)
 
-sampler Sampler_BaseTexture			: register(s0);     // Base map, selfillum in alpha
-sampler Sampler_NormalTexture		: register(s1);     // Normal map
-sampler Sampler_Envmap				: register(s2);     // Cubemap
-sampler Sampler_Lightwarp			: register(s3);     // Lightwarp texture
-sampler Sampler_ThicknessTexture	: register(s3);	    // SSS thickness texture
-sampler Sampler_ShadowDepth			: register(s4);     // Flashlight shadow depth map sampler
-sampler Sampler_RandRot				: register(s5);     // RandomRotation sampler
-sampler Sampler_FlashlightCookie	: register(s6);     // Flashlight cookie 
-sampler Sampler_Lightmap			: register(s7);     // Lightmap
+//==================================================================================================
+// Samplers
+//==================================================================================================
 
+sampler Sampler_BaseTexture			: register(s0);
+sampler Sampler_MRAOTexture			: register(s1);
+sampler Sampler_NormalTexture		: register(s2);
 #if WRINKLEMAP
-	sampler Sampler_Wrinkle			: register(s8);		// Compression base
-	sampler Sampler_Stretch			: register(s9);		// Expansion base
-	sampler Sampler_NormalWrinkle	: register(s14);	// Compression normal
-	sampler Sampler_NormalStretch	: register(s12);	// Expansion normal
+	sampler Sampler_Compress		: register(s3);
+	sampler Sampler_Stretch			: register(s4);
+	sampler Sampler_NormalCompress	: register(s5);
+	sampler Sampler_NormalStretch	: register(s6);
 #endif
-
-sampler Sampler_MRAOTexture			: register(s10);    // MRAO texture
+sampler Sampler_SSAO				: register(s7);
 
 #if EMISSIVE
-	sampler Sampler_EmissionTexture : register(s11);    // Emission texture
+	sampler Sampler_EmissionTexture : register(s8);    // Emission texture
 #endif
+sampler Sampler_Lightwarp			: register(s9);
+sampler Sampler_ThicknessTexture	: register(s10);
 
-#if SPECULAR
-	sampler Sampler_SpecularTexture : register(s12);    // Specular F0 texture
+#if !FLASHLIGHT
+sampler Sampler_Lightmap			: register(s13);
+sampler Sampler_Envmap				: register(s14);
+#else
+sampler Sampler_ProjTexCookie		: register(s12);
+sampler Sampler_RandRot				: register(s13);
+sampler Sampler_ShadowDepth			: register(s14);
 #endif
-
-sampler Sampler_SSAO				: register(s13);	 // SFM SSAO sampler
-
-
 
 // FIXME: use VFace Register to fix $NoCull Lighting
 struct PS_INPUT
 {
-	float2 vPos : VPOS;
-	float4 WorldPos_ProjPosZ : TEXCOORD0; // Always need Pos and Fog
-	float2 TexCoord : TEXCOORD1;
-	float4 LightAttenuations : TEXCOORD2;
+	float2 vPos						: VPOS;
+	float4 WorldPos_ProjPosZ		: TEXCOORD0; // Always need Pos and Fog
+	float2 TexCoord					: TEXCOORD1;
+	float4 LightAttenuations		: TEXCOORD2;
 	float4 ProjPosXYW_WrinkleWeight : TEXCOORD4; // wrinkle weight in w
 
 	// FIXME: Not used on Models
-	float4 LightmapTexCoord1And2 : TEXCOORD5;
-	float4 LightmapTexCoord3 : TEXCOORD6;
+	float4 LightmapTexCoord1And2	: TEXCOORD5;
+	float4 LightmapTexCoord3		: TEXCOORD6;
 
-	float3 Tangent : TANGENT;
-	float3 Bitangent : BINORMAL;
-	float3 Normal : NORMAL;
+	float3 Tangent					: TANGENT;
+	float3 Bitangent				: BINORMAL;
+	float3 Normal					: NORMAL;
 };
 
 // Source
@@ -164,7 +163,7 @@ float4 main(PS_INPUT i) : COLOR
 	
 		f1TextureAmount = 1.0f - f1WrinkleAmount - f1StretchAmount; // These should sum to one
 	
-		float3 f3WrinkleColor = tex2D(Sampler_Wrinkle, f2TexCoord).rgb;
+		float3 f3WrinkleColor = tex2D(Sampler_Compress, f2TexCoord).rgb;
 		float3 f3StretchColor = tex2D(Sampler_Stretch, f2TexCoord).rgb;
 	
 		// Apply only to RGB for consistency with the Normal Map ( also makes the Results more predictable )
@@ -174,7 +173,7 @@ float4 main(PS_INPUT i) : COLOR
 	
 		// NOTE: We use Normal Alpha for Height
 		// Therefore, we MUST not use it
-		float3 f3WrinkleNormalTS = tex2D(Sampler_NormalWrinkle, f2TexCoord).xyz;
+		float3 f3WrinkleNormalTS = tex2D(Sampler_NormalCompress, f2TexCoord).xyz;
 		float3 f3StretchNormalTS = tex2D(Sampler_NormalStretch, f2TexCoord).xyz;
 		f4NormalTS.xyz = f1TextureAmount * f4NormalTS.xyz
 					   + f1WrinkleAmount * f3WrinkleNormalTS
@@ -331,7 +330,7 @@ float4 main(PS_INPUT i) : COLOR
 		float distSquared = dot(delta, delta);
 		float dist = sqrt(distSquared);
 	
-		float3 flashlightColor = tex2D(Sampler_FlashlightCookie, vProjCoords.xy).rgb;
+		float3 flashlightColor = tex2D(Sampler_ProjTexCookie, vProjCoords.xy).rgb;
 		flashlightColor *= cFlashlightColor.xyz;
 	
 		float fAtten = saturate(dot(cFlashlightAttenuationFactors.xyz, float3(1.0, 1.0 / dist, 1.0 / distSquared)));

@@ -17,32 +17,35 @@
 #include "pbr_mrao_ps30.inc"
 #include "pbr_mrao_projtex_ps30.inc"
 
-// FIXME: Sampler Layout
-// Defining samplers
-const Sampler_t SAMPLER_BASETEXTURE = SHADER_SAMPLER0;
-const Sampler_t SAMPLER_NORMAL = SHADER_SAMPLER1;
-const Sampler_t SAMPLER_ENVMAP = SHADER_SAMPLER2;
-const Sampler_t SAMPLER_LIGHTWARP = SHADER_SAMPLER3;
-const Sampler_t SAMPLER_THICKNESS = SHADER_SAMPLER3;
+// M/R and S/G
+const Sampler_t SAMPLER_BASECOLOR		= SHADER_SAMPLER0;
+const Sampler_t SAMPLER_DIFFUSE			= SHADER_SAMPLER0;
+const Sampler_t SAMPLER_SPECULAR		= SHADER_SAMPLER1;
+const Sampler_t SAMPLER_MRAO			= SHADER_SAMPLER1;
 
-const Sampler_t SAMPLER_SHADOWDEPTH = SHADER_SAMPLER4;
-const Sampler_t SAMPLER_RANDOMROTATION = SHADER_SAMPLER5;
-const Sampler_t SAMPLER_FLASHLIGHT = SHADER_SAMPLER6;
+const Sampler_t SAMPLER_NORMAL			= SHADER_SAMPLER2;
 
-const Sampler_t SAMPLER_LIGHTMAP = SHADER_SAMPLER7;
+// Wrinklemapping should follow the other 3
+const Sampler_t SAMPLER_COMPRESS		= SHADER_SAMPLER3;
+const Sampler_t SAMPLER_STRETCH			= SHADER_SAMPLER4;
+const Sampler_t SAMPLER_BUMPCOMPRESS	= SHADER_SAMPLER5;
+const Sampler_t SAMPLER_BUMPSTRETCH		= SHADER_SAMPLER6;
 
-const Sampler_t SAMPLER_COMPRESS = SHADER_SAMPLER8;
-const Sampler_t SAMPLER_STRETCH = SHADER_SAMPLER9;
-const Sampler_t SAMPLER_MRAO = SHADER_SAMPLER10;
+// We always have SSAO
+const Sampler_t SAMPLER_SSAO			= SHADER_SAMPLER7;
 
-const Sampler_t SAMPLER_EMISSIVE = SHADER_SAMPLER11;
+// 8-12 are now usable for other Things
+const Sampler_t SAMPLER_EMISSIVE		= SHADER_SAMPLER8; // Can move this to a separate Pass
+const Sampler_t SAMPLER_LIGHTWARP		= SHADER_SAMPLER9; // FIXME: Nuke this
+const Sampler_t SAMPLER_THICKNESS		= SHADER_SAMPLER10; // FIXME: Nuke this
 
-const Sampler_t SAMPLER_SPECULAR = SHADER_SAMPLER12;
-
-const Sampler_t SAMPLER_SSAO = SHADER_SAMPLER13;
-
-const Sampler_t SAMPLER_BUMPCOMPRESS = SHADER_SAMPLER14;
-const Sampler_t SAMPLER_BUMPSTRETCH = SHADER_SAMPLER12;
+// Lighting is split into two parts
+// Regular Pass and Projected Texture Passes
+const Sampler_t SAMPLER_LIGHTMAP		= SHADER_SAMPLER13;
+const Sampler_t SAMPLER_ENVMAP			= SHADER_SAMPLER14;
+const Sampler_t SAMPLER_PROJTEXCOOKIE	= SHADER_SAMPLER12; // These exclude eachother with EnvMap and Lightmap
+const Sampler_t SAMPLER_RANDOMROTATION	= SHADER_SAMPLER13;
+const Sampler_t SAMPLER_SHADOWDEPTH		= SHADER_SAMPLER14;
 
 // Convars
 static ConVar mat_fullbright("mat_fullbright", "0", FCVAR_CHEAT);
@@ -265,8 +268,8 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 			// FIXME: All of this
 			// Setting up samplers
-			pShaderShadow->EnableTexture(SAMPLER_BASETEXTURE, true);    // Basecolor texture
-			pShaderShadow->EnableSRGBRead(SAMPLER_BASETEXTURE, true);   // Basecolor is sRGB
+			pShaderShadow->EnableTexture(SAMPLER_BASECOLOR, true);    // Basecolor texture
+			pShaderShadow->EnableSRGBRead(SAMPLER_BASECOLOR, true);   // Basecolor is sRGB
 
 			// FIXME: This is enabled without ever checking if there is a Emissive Texture
 			pShaderShadow->EnableTexture(SAMPLER_EMISSIVE, true);       // Emission texture
@@ -292,8 +295,8 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				pShaderShadow->SetShadowDepthFiltering(SAMPLER_SHADOWDEPTH);
 				pShaderShadow->EnableSRGBRead(SAMPLER_SHADOWDEPTH, false);
 				pShaderShadow->EnableTexture(SAMPLER_RANDOMROTATION, true);     // Noise map
-				pShaderShadow->EnableTexture(SAMPLER_FLASHLIGHT, true);         // Flashlight cookie - ok why is it not called cookie then
-				pShaderShadow->EnableSRGBRead(SAMPLER_FLASHLIGHT, true);
+				pShaderShadow->EnableTexture(SAMPLER_PROJTEXCOOKIE, true);         // Flashlight cookie - ok why is it not called cookie then
+				pShaderShadow->EnableSRGBRead(SAMPLER_PROJTEXCOOKIE, true);
 			}
 
 			// Setting up envmap
@@ -436,11 +439,11 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			// Setting up albedo texture
 			if (bHasBaseTexture)
 			{
-				BindTexture(SAMPLER_BASETEXTURE, BaseTexture, Frame);
+				BindTexture(SAMPLER_BASECOLOR, BaseTexture, Frame);
 			}
 			else
 			{
-				pShaderAPI->BindStandardTexture(SAMPLER_BASETEXTURE, TEXTURE_GREY);
+				pShaderAPI->BindStandardTexture(SAMPLER_BASECOLOR, TEXTURE_GREY);
 			}
 
 			// Setting up vmt color
@@ -650,7 +653,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			// Handle mat_fullbright 2 (diffuse lighting only)
 			if (bLightingOnly)
 			{
-				pShaderAPI->BindStandardTexture(SAMPLER_BASETEXTURE, TEXTURE_GREY); // Basecolor
+				pShaderAPI->BindStandardTexture(SAMPLER_BASECOLOR, TEXTURE_GREY); // Basecolor
 			}
 
 			// FIXME: Duplicate Texture Bind, move this to where $EnvMap is handled
@@ -722,7 +725,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				float atten[4], pos[4], tweaks[4];
 				SetFlashLightColorFromState(flashlightState, pShaderAPI, false, PSREG_FLASHLIGHT_COLOR);
 
-				BindTexture(SAMPLER_FLASHLIGHT, flashlightState.m_pSpotlightTexture, flashlightState.m_nSpotlightTextureFrame);
+				BindTexture(SAMPLER_PROJTEXCOOKIE, flashlightState.m_pSpotlightTexture, flashlightState.m_nSpotlightTextureFrame);
 
 				// Set the flashlight attenuation factors
 				atten[0] = flashlightState.m_fConstantAtten;
