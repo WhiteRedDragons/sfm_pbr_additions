@@ -54,33 +54,30 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
     // Setting up vmt parameters
     // FIXME: Capslocked Parameter Names are hard to read and this is only a thing because everyone copies the Code from Valve
     BEGIN_SHADER_PARAMS;
-        SHADER_PARAM(AlphaTestReference, SHADER_PARAM_TYPE_FLOAT, "0", "");
-        SHADER_PARAM(EnvMap, SHADER_PARAM_TYPE_ENVMAP, "", "Set the cubemap for this material.");
-        SHADER_PARAM(MRAOTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Texture with metalness in R, roughness in G, ambient occlusion in B.");
-        SHADER_PARAM(EmissionTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Emission texture");
-        SHADER_PARAM(NormalTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture (deprecated, use $bumpmap)");
-        SHADER_PARAM(BumpMap, SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture");
+        SHADER_PARAM(AlphaTestReference, SHADER_PARAM_TYPE_FLOAT, "0", "")
+        SHADER_PARAM(EnvMap, SHADER_PARAM_TYPE_ENVMAP, "", "Set the cubemap for this material.")
+        SHADER_PARAM(MRAOTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Texture with metalness in R, roughness in G, ambient occlusion in B.")
+        SHADER_PARAM(EmissionTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Emission texture")
+        SHADER_PARAM(NormalTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture (deprecated, use $bumpmap)")
+        SHADER_PARAM(BumpMap, SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture")
         SHADER_PARAM(BumpFrame, SHADER_PARAM_TYPE_INTEGER, "0", "Frame number for $bumpmap")
-        SHADER_PARAM(UseEnvAmbient, SHADER_PARAM_TYPE_BOOL, "0", "Use the cubemaps to compute ambient light.");
-        SHADER_PARAM(SpecularTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Specular F0 RGB map");
-        SHADER_PARAM(LightWarpTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Lightwarp Texture" );
-        SHADER_PARAM(ThicknessTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Thickness map for SSS" );
-        SHADER_PARAM(Parallax, SHADER_PARAM_TYPE_BOOL, "0", "Use Parallax Occlusion Mapping.");
-        SHADER_PARAM(ParallaxDepth, SHADER_PARAM_TYPE_FLOAT, "0.0030", "Depth of the Parallax Map");
-        SHADER_PARAM(ParallaxCenter, SHADER_PARAM_TYPE_FLOAT, "0.5", "Center depth of the Parallax Map");
-        SHADER_PARAM(MetalnessFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Metalness factor");
-        SHADER_PARAM(RoughnessFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Roughness factor");
-        SHADER_PARAM(EmissiveFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Emissive factor" );
-        SHADER_PARAM(SpecularFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Specular factor" );
-        SHADER_PARAM(AOFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Ambient occlusion factor");
-        SHADER_PARAM(SSAOFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Screen space ambient occlusion factor");
-        SHADER_PARAM(SSSCOLOR, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Subsurface scattering color");
-        SHADER_PARAM(SSSIntensity, SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS intensity");
-        SHADER_PARAM(SSSPowerScale, SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS power scale");
-        SHADER_PARAM(Compress, SHADER_PARAM_TYPE_TEXTURE, "", "Compression wrinklemap");
-        SHADER_PARAM(BumpCompress, SHADER_PARAM_TYPE_TEXTURE, "", "Stretch bumpmap" );
-        SHADER_PARAM(Stretch, SHADER_PARAM_TYPE_TEXTURE, "", "Stretch wrinklemap");
-        SHADER_PARAM(BumpStretch, SHADER_PARAM_TYPE_TEXTURE, "", "Compression bumpmap" );
+        SHADER_PARAM(UseEnvAmbient, SHADER_PARAM_TYPE_BOOL, "0", "Use the cubemaps to compute ambient light.")
+        SHADER_PARAM(SpecularTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Specular F0 RGB map")
+        SHADER_PARAM(LightWarpTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Lightwarp Texture" )
+        SHADER_PARAM(ThicknessTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Thickness map for SSS" )
+        SHADER_PARAM(Parallax, SHADER_PARAM_TYPE_BOOL, "0", "Use Parallax Occlusion Mapping.")
+        SHADER_PARAM(ParallaxDepth, SHADER_PARAM_TYPE_FLOAT, "0.0030", "Depth of the Parallax Map")
+        SHADER_PARAM(ParallaxCenter, SHADER_PARAM_TYPE_FLOAT, "0.5", "Center depth of the Parallax Map")
+        SHADER_PARAM(EmissiveFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Emissive factor" )
+        SHADER_PARAM(SpecularFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Specular factor" )
+        SHADER_PARAM(SSSCOLOR, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Subsurface scattering color")
+        SHADER_PARAM(SSSIntensity, SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS intensity")
+        SHADER_PARAM(SSSPowerScale, SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS power scale")
+        SHADER_PARAM(Compress, SHADER_PARAM_TYPE_TEXTURE, "", "Compression wrinklemap")
+        SHADER_PARAM(BumpCompress, SHADER_PARAM_TYPE_TEXTURE, "", "Stretch bumpmap" )
+        SHADER_PARAM(Stretch, SHADER_PARAM_TYPE_TEXTURE, "", "Stretch wrinklemap")
+        SHADER_PARAM(BumpStretch, SHADER_PARAM_TYPE_TEXTURE, "", "Compression bumpmap" )
+        SHADER_PARAM(MRAOBias, SHADER_PARAM_TYPE_VEC4, "", "")
     END_SHADER_PARAMS;
 
     // Initializing parameters
@@ -127,12 +124,8 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
         InitIntParam( BumpFrame, params, 0 );
 
         // FIXME: Bracket Spacing
-        InitFloatParam( MetalnessFactor, params, 1.0f );
-        InitFloatParam( RoughnessFactor, params, 1.0f );
         InitFloatParam( EmissiveFactor, params, 1.0f );
         InitFloatParam( SpecularFactor, params, 1.0f );
-        InitFloatParam( AOFactor, params, 1.0f );
-        InitFloatParam( SSAOFactor, params, 1.0f );
         InitFloatParam( SSSIntensity, params, 1.0f );
         InitFloatParam( SSSPowerScale, params, 1.0f );
 
@@ -660,14 +653,10 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
             // FIXME: Use Bias Values because multiplication does not f'n work with 0.0 and makes anything hard to pinpoint to an exact Value
             // FIXME: Single Parameter not 4
-            float vMRAOFactors[4] =
-            {
-                GetFloatParam( MetalnessFactor, params, 1.0f ),
-                GetFloatParam( RoughnessFactor, params, 1.0f ),
-                GetFloatParam( AOFactor, params, 1.0f ),
-                GetFloatParam( SSAOFactor, params, 1.0f ) * flSSAOStrength
-            };
-            pShaderAPI->SetPixelShaderConstant(PSREG_PBR_MRAO_FACTORS, vMRAOFactors, 1);
+            float cMRAOFactors[4];
+            params[MRAOBias]->GetVecValue(cMRAOFactors, 4);
+            cMRAOFactors[3] *= flSSAOStrength;
+            pShaderAPI->SetPixelShaderConstant(PSREG_PBR_MRAO_FACTORS, cMRAOFactors);
 
             // Emissive, specular factors, SSS intensity and power scale 
             float vExtraFactors[4] =
