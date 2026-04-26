@@ -1,0 +1,36 @@
+//==================================================================================================
+//
+// Physically Based Rendering pixel shader for brushes and models
+//
+//==================================================================================================
+
+// FIXME: Move Brush Code to it's own Function
+// FIXME: Solve the Fact we have multiple Pixel Fog Types yet also have WRITEWATERFOGTODESTALPHA at the same Time
+// FIXME: Determine whether UBERLIGHT is an Extension of FLASHLIGHTSHADOWS
+// STATIC: "FLASHLIGHTDEPTHFILTERMODE"  "0..2"
+// STATIC: "PARALLAXOCCLUSION"          "0..1"
+// STATIC: "WORLD_NORMAL"				"0..1"
+// STATIC: "WRINKLEMAP"					"0..1"
+// STATIC: "SUBSURFACESCATTERING"		"0..1"
+
+// DYNAMIC: "PIXELFOGTYPE"              "0..2"
+// DYNAMIC: "FLASHLIGHTSHADOWS"         "0..1"
+// DYNAMIC: "UBERLIGHT"					"0..1"
+
+// Wrinkle and parallax/lightmapping are incompatible
+// SKIP: ( $WRINKLEMAP != 0 && $PARALLAXOCCLUSION != 0 )
+
+// Lightwarp and SSS are incompatible
+// SKIP: ( $SUBSURFACESCATTERING != 0 && $LIGHTWARPTEXTURE != 0 )
+
+// SSS doesn't make sense on brushes or with parallax
+// SKIP: ( $SUBSURFACESCATTERING != 0 &&  $PARALLAXOCCLUSION != 0 )
+
+// Always ProjTex from this Shader
+#define FLASHLIGHT 1
+#define NUM_LIGHTS 0
+
+// FIXME: Shouldn't need this
+#define bWriteDepthToAlpha false
+
+#include "pbr_main.h"

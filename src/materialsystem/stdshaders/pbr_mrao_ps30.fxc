@@ -1,0 +1,46 @@
+//==================================================================================================
+//
+// Physically Based Rendering pixel shader for brushes and models
+//
+//==================================================================================================
+
+// FIXME: Move Brush Code to it's own Function
+// FIXME: Move Emissive to it's own Shader Pass
+// FIXME: Solve the Problem with EnvMapAmbient
+// FIXME: Solve the Fact we have multiple Pixel Fog Types yet also have WRITEWATERFOGTODESTALPHA at the same Time
+// FIXME: Determine whether UBERLIGHT is an Extension of FLASHLIGHTSHADOWS
+// FIXME: A lot of the non SPECULAR Code is still ran under SPECULAR. Just make this a separate Shader honestly
+// @STATIC: "LIGHTMAPPED"                "0..0"
+// STATIC: "USEENVAMBIENT"              "0..1"
+// STATIC: "EMISSIVE"                   "0..1"
+// @STATIC: "SPECULAR"                   "0..0"
+// STATIC: "PARALLAXOCCLUSION"          "0..1"
+// STATIC: "WORLD_NORMAL"				"0..1"
+// @STATIC: "LIGHTWARPTEXTURE"			"0..0"
+// STATIC: "WRINKLEMAP"					"0..1"
+// STATIC: "SUBSURFACESCATTERING"		"0..1"
+
+// DYNAMIC: "WRITEWATERFOGTODESTALPHA"  "0..1"
+// DYNAMIC: "PIXELFOGTYPE"              "0..2"
+// DYNAMIC: "NUM_LIGHTS"                "0..4"
+// DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"  "0..1"
+
+// FIXME: This Mess
+// Can't write fog to alpha if there is no fog
+// SKIP: ($PIXELFOGTYPE == 0) && ($WRITEWATERFOGTODESTALPHA != 0)
+
+// Only do world normals in constrained case
+// SKIP: ( $WORLD_NORMAL == 1 ) && ( $NUM_LIGHTS != 0 ) && ( $WRITEWATERFOGTODESTALPHA == 1 )
+
+// Wrinkle and parallax/lightmapping are incompatible
+// SKIP: ( $WRINKLEMAP != 0 && $PARALLAXOCCLUSION != 0 )
+// SKIP: ( $WRINKLEMAP != 0 && $LIGHTMAPPED != 0 )
+
+// Lightwarp and SSS are incompatible
+// SKIP: ( $SUBSURFACESCATTERING != 0 ) && ( $LIGHTWARPTEXTURE != 0 )
+
+// SSS doesn't make sense on brushes or with parallax
+// SKIP: ( $SUBSURFACESCATTERING != 0 && $PARALLAXOCCLUSION != 0 )
+
+
+#include "pbr_main.h"

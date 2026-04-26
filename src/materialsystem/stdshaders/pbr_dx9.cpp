@@ -14,7 +14,8 @@
 
 // Includes for PS30
 #include "pbr_vs30.inc"
-#include "pbr_ps30.inc"
+#include "pbr_mrao_ps30.inc"
+#include "pbr_mrao_projtex_ps30.inc"
 
 // FIXME: Sampler Layout
 // Defining samplers
@@ -372,20 +373,32 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 //          SET_STATIC_VERTEX_SHADER_COMBO(LIGHTMAPPED, bLightMapped);
 			SET_STATIC_VERTEX_SHADER(pbr_vs30);
 
-			// Setting up static pixel shader
-			DECLARE_STATIC_PIXEL_SHADER(pbr_ps30);
-			SET_STATIC_PIXEL_SHADER_COMBO(FLASHLIGHT, bHasFlashlight);
-			SET_STATIC_PIXEL_SHADER_COMBO(FLASHLIGHTDEPTHFILTERMODE, nShadowFilterMode); // TODO: Check if the ATI Shadow Format Issue was fixed on SFM
-//            SET_STATIC_PIXEL_SHADER_COMBO(LIGHTMAPPED, 0); // bLightMapped
-			SET_STATIC_PIXEL_SHADER_COMBO(USEENVAMBIENT, bUseEnvAmbient);
-			SET_STATIC_PIXEL_SHADER_COMBO(EMISSIVE, bHasEmissionTexture); // FIXME: Make additively rendered pass to save on Samplers
-//            SET_STATIC_PIXEL_SHADER_COMBO(SPECULAR, 0); // bHasSpecularTexture
-			SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
-			SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
-//            SET_STATIC_PIXEL_SHADER_COMBO(LightWarpTexture, 0); // bLightwarpTexture
-			SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
-			SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
-			SET_STATIC_PIXEL_SHADER(pbr_ps30);
+			if(bHasFlashlight)
+			{
+				DECLARE_STATIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
+				SET_STATIC_PIXEL_SHADER_COMBO(FLASHLIGHTDEPTHFILTERMODE, nShadowFilterMode); // TODO: Check if the ATI Shadow Format Issue was fixed on SFM			
+//				SET_STATIC_PIXEL_SHADER_COMBO(SPECULAR, 0); // bHasSpecularTexture
+				SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
+				SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
+				SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
+				SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
+				SET_STATIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
+
+			}
+			else
+			{
+				DECLARE_STATIC_PIXEL_SHADER(pbr_mrao_ps30);
+//				SET_STATIC_PIXEL_SHADER_COMBO(LIGHTMAPPED, 0); // bLightMapped
+				SET_STATIC_PIXEL_SHADER_COMBO(USEENVAMBIENT, bUseEnvAmbient);
+				SET_STATIC_PIXEL_SHADER_COMBO(EMISSIVE, bHasEmissionTexture); // FIXME: Make additively rendered pass to save on Samplers
+//				SET_STATIC_PIXEL_SHADER_COMBO(SPECULAR, 0); // bHasSpecularTexture
+				SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
+				SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
+//				SET_STATIC_PIXEL_SHADER_COMBO(LightWarpTexture, 0); // bLightwarpTexture
+				SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
+				SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
+				SET_STATIC_PIXEL_SHADER(pbr_mrao_ps30);
+			}
 
 			// FIXME: Move up to the rest of snapshot setup ( LUX style )
 			// Setting up fog
@@ -607,14 +620,24 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 			// Setting up dynamic pixel shader
 			// FIXME: Optimize Dynamic Combos. This is long compiletimes for no Reason
-			DECLARE_DYNAMIC_PIXEL_SHADER(pbr_ps30);
-			SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_LIGHTS, lightState.m_nNumLights);
-			SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITEWATERFOGTODESTALPHA, bWriteWaterFogToAlpha);
-			SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha);
-			SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
-			SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, bFlashlightShadows);
-			SET_DYNAMIC_PIXEL_SHADER_COMBO(UBERLIGHT, flashlightState.m_bUberlight);
-			SET_DYNAMIC_PIXEL_SHADER(pbr_ps30);
+			if (bHasFlashlight)
+			{
+				DECLARE_DYNAMIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, bFlashlightShadows);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(UBERLIGHT, flashlightState.m_bUberlight);
+				SET_DYNAMIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
+			}
+			else
+			{
+				DECLARE_DYNAMIC_PIXEL_SHADER(pbr_mrao_ps30);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_LIGHTS, lightState.m_nNumLights);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITEWATERFOGTODESTALPHA, bWriteWaterFogToAlpha);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
+				SET_DYNAMIC_PIXEL_SHADER(pbr_mrao_ps30);
+			}
+
 
 			// Setting up base texture transform
 			// FIXME: Use a Macro Map for this because I don't trust these random Enums that love to vary across branches
