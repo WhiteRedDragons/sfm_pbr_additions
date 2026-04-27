@@ -286,8 +286,16 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			// FIXME: This doesn't consider Translucents like Stock Shaders
 			if (bHasFlashlight )
 			{
-				pShaderShadow->EnableBlending(true);
-				pShaderShadow->BlendFunc(SHADER_BLEND_ONE, SHADER_BLEND_ONE); // Additive blending
+				if(IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT))
+				{
+					pShaderShadow->EnableBlending(true);
+					pShaderShadow->BlendFunc(SHADER_BLEND_SRC_ALPHA, SHADER_BLEND_ONE); // Additive blending
+				}
+				else
+				{
+					pShaderShadow->EnableBlending(true);
+					pShaderShadow->BlendFunc(SHADER_BLEND_ONE, SHADER_BLEND_ONE); // Additive blending				
+				}
 			}
 			else
 			{
