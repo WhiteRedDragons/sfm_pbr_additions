@@ -54,7 +54,9 @@ static ConVar mat_pbr_parallaxmap("mat_pbr_parallaxmap", "1");
 
 static ConVar pbr_microshadows_globalstrength("pbr_microshadows_globalstrength", "0.50", FCVAR_NONE);
 
-// Beginning the shader
+//==========================================================================//
+// Shader Start
+//==========================================================================//
 BEGIN_VS_SHADER(PBR, "PBR shader")
 
 	// Setting up vmt parameters
@@ -127,16 +129,22 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		}
 
 		// NUKE: Default Value is 0 even if you don't set it
-		InitIntParam( BumpFrame, params, 0 );
+		InitIntParam(BumpFrame, params, 0);
 
 		// FIXME: Bracket Spacing
-		InitFloatParam( EmissiveFactor, params, 1.0f );
-		InitFloatParam( SpecularFactor, params, 1.0f );
-		InitFloatParam( SSSIntensity, params, 1.0f );
-		InitFloatParam( SSSPowerScale, params, 1.0f );
+		InitFloatParam(EmissiveFactor, params, 1.0f);
+		InitFloatParam(SpecularFactor, params, 1.0f);
+		InitFloatParam(SSSIntensity, params, 1.0f);
+		InitFloatParam(SSSPowerScale, params, 1.0f);
 
 		// NUKE: This is a Color Param, it's default Value is 1 1 1 if you set it here or not
-		InitVecParam( SSSCOLOR, params, 1, 1, 1 );
+		InitVecParam(SSSCOLOR, params, 1, 1, 1);
+
+		// "Parallax and wrinkle are incompatible"
+		if (!mat_pbr_parallaxmap.GetBool() || params[Compress]->IsDefined())
+		{
+			params[Parallax]->SetIntValue(0);
+		}
 	};
 
 	// Define shader fallback
@@ -231,15 +239,24 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		bool bLightwarpTexture = !bThicknessTexture && params[LightWarpTexture]->IsTexture();
 
 		// Only supported on models
-		bool bWrinkleMapping = !bLightMapped && params[Compress]->IsDefined();
+		bool bWrinkleMapping = !bLightMapped && params[Compress]->IsTexture();
+
+		bool bHasParallax = params[Parallax]->GetIntValue() != 0;
 
 		// Determining whether we're dealing with a fully opaque material
 		// FIXME: Transluceny on PBR is more than just simple Alphablending
 		BlendType_t nBlendType = EvaluateBlendRequirements(BaseTexture, true);
 		bool bFullyOpaque = (nBlendType != BT_BLENDADD) && (nBlendType != BT_BLEND) && !bIsAlphaTested;
 
+		//==========================================================================//
+		// Static Snapshot of the Shader Settings
+		//==========================================================================//
 		if (IsSnapshotting())
 		{
+			//==========================================================================//
+			// General Rendering Setup
+			//==========================================================================//
+			
 			// If alphatest is on, enable it
 			if(bIsAlphaTested)
 			{
@@ -263,66 +280,55 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				SetDefaultBlendingShadowState(BaseTexture, true);
 			}
 
-			// FIXME: Why is this here and not down there
-			int nShadowFilterMode = bHasFlashlight ? g_pHardwareConfig->GetShadowFilterMode() : 0;
+			// "See common_ps_fxc.h line 349"
+			// The Shader will output Linear Values and the Engine can worry about converting them to Gamma
+			pShaderShadow->EnableSRGBWrite(true);
 
-			// FIXME: All of this
-			// Setting up samplers
-			pShaderShadow->EnableTexture(SAMPLER_BASECOLOR, true);    // Basecolor texture
-			pShaderShadow->EnableSRGBRead(SAMPLER_BASECOLOR, true);   // Basecolor is sRGB
-
-			// FIXME: This is enabled without ever checking if there is a Emissive Texture
-			pShaderShadow->EnableTexture(SAMPLER_EMISSIVE, true);       // Emission texture
-			pShaderShadow->EnableSRGBRead(SAMPLER_EMISSIVE, true);      // Emission is sRGB
-
-			// FIXME: This is enabled despite only being used on Brushes
-			pShaderShadow->EnableTexture(SAMPLER_LIGHTMAP, true);       // Lightmap texture
-			pShaderShadow->EnableSRGBRead(SAMPLER_LIGHTMAP, false);     // Lightmaps aren't sRGB
-
-			pShaderShadow->EnableTexture(SAMPLER_MRAO, true);           // MRAO texture
-			pShaderShadow->EnableSRGBRead(SAMPLER_MRAO, false);         // MRAO isn't sRGB
-			pShaderShadow->EnableTexture(SAMPLER_NORMAL, true);         // Normal texture
-			pShaderShadow->EnableSRGBRead(SAMPLER_NORMAL, false);       // Normals aren't sRGB
-			pShaderShadow->EnableTexture(SAMPLER_SPECULAR, true);       // Specular F0 texture
-			pShaderShadow->EnableSRGBRead(SAMPLER_SPECULAR, true);      // Specular F0 is sRGB
-			pShaderShadow->EnableTexture(SAMPLER_SSAO, true);           // SSAO texture
-			pShaderShadow->EnableSRGBRead(SAMPLER_SSAO, true);         // SSAO is sRGB
-
-			// If the flashlight is on, set up its textures
+			// Projected Texture fades to black since it renders additively
 			if (bHasFlashlight)
+				FogToBlack();
+			else
+				DefaultFog();
+
+			// If we don't use Alpha for Opacity, write Depth to DestAlpha for Particles, or the HeightFogFactor
+			pShaderShadow->EnableAlphaWrites(bFullyOpaque);
+
+			//==========================================================================//
+			// Vertex Shader - Vertex Format
+			//==========================================================================//
+
+			if (IS_FLAG_SET(MATERIAL_VAR_MODEL))
 			{
-				pShaderShadow->EnableTexture(SAMPLER_SHADOWDEPTH, true);        // Shadow depth map
-				pShaderShadow->SetShadowDepthFiltering(SAMPLER_SHADOWDEPTH);
-				pShaderShadow->EnableSRGBRead(SAMPLER_SHADOWDEPTH, false);
-				pShaderShadow->EnableTexture(SAMPLER_RANDOMROTATION, true);     // Noise map
-				pShaderShadow->EnableTexture(SAMPLER_PROJTEXCOOKIE, true);         // Flashlight cookie - ok why is it not called cookie then
-				pShaderShadow->EnableSRGBRead(SAMPLER_PROJTEXCOOKIE, true);
+				unsigned int nFlags = VERTEX_POSITION | VERTEX_NORMAL | VERTEX_FORMAT_COMPRESSED;
+
+				int nTexCoords = 1;
+				int nUserDataSize = 4;
+
+				pShaderShadow->VertexShaderVertexFormat(nFlags, nTexCoords, NULL, nUserDataSize);
+			}
+			else
+			{
+				unsigned int nFlags = VERTEX_POSITION | VERTEX_NORMAL;
+
+				int nTexCoords = 3; // Texture UV, Lightmap UV, Lightmap Offset
+				int nUserDataSize = 0;
+
+				pShaderShadow->VertexShaderVertexFormat(nFlags, nTexCoords, NULL, nUserDataSize);
 			}
 
-			// Setting up envmap
-			if (bHasEnvMap)
-			{
-				pShaderShadow->EnableTexture(SAMPLER_ENVMAP, true); // Envmap
-				if (g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE)
-				{
-					pShaderShadow->EnableSRGBRead(SAMPLER_ENVMAP, true); // Envmap is only sRGB with HDR disabled?
-				}
-			}
+			//==========================================================================//
+			// Sampler Setup
+			//==========================================================================//
 
-			// Thickness (SSS)
-			if (bThicknessTexture)
-			{
-				pShaderShadow->EnableTexture(SAMPLER_THICKNESS, true); 
-				pShaderShadow->EnableSRGBRead(SAMPLER_THICKNESS, false);
-			}     
-			// Lightwarp
-			else if (bLightwarpTexture)
-			{
-				pShaderShadow->EnableTexture(SAMPLER_LIGHTWARP, true); 
-				pShaderShadow->EnableSRGBRead(SAMPLER_LIGHTWARP, false);
-			}
+			// s0, s1, s2
+			pShaderShadow->EnableTexture(SAMPLER_BASECOLOR, true);
+			pShaderShadow->EnableSRGBRead(SAMPLER_BASECOLOR, true);
+			pShaderShadow->EnableTexture(SAMPLER_MRAO, true);
+			pShaderShadow->EnableSRGBRead(SAMPLER_MRAO, false);
+			pShaderShadow->EnableTexture(SAMPLER_NORMAL, true);
+			pShaderShadow->EnableSRGBRead(SAMPLER_NORMAL, false);
 
-			// Wrinkle mapping
+			// s3, s4, s5, s6
 			if (bWrinkleMapping)
 			{
 				pShaderShadow->EnableTexture(SAMPLER_COMPRESS, true); 
@@ -335,42 +341,70 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				pShaderShadow->EnableSRGBRead(SAMPLER_BUMPSTRETCH, false);
 			}
 
-			// Enabling sRGB writing
-			// See common_ps_fxc.h line 349
-			// PS2b shaders and up write sRGB
-			pShaderShadow->EnableSRGBWrite(true);
+			// s7
+			// Rendertargets are (usually) sRGB
+			pShaderShadow->EnableTexture(SAMPLER_SSAO, true);
+			pShaderShadow->EnableSRGBRead(SAMPLER_SSAO, true);
 
-			// FIXME: This Vertex Format Setup doesn't follow Convention and is likely broken with Facial Flexes because of missing Uncompressed Vert Data
-			if (IS_FLAG_SET(MATERIAL_VAR_MODEL))
+			// s8
+			if(bHasEmissionTexture)
 			{
-				// We only need the position and surface normal
-				unsigned int flags = VERTEX_POSITION | VERTEX_NORMAL | VERTEX_FORMAT_COMPRESSED;
-				// We need three texcoords, all in the default float2 size
-				pShaderShadow->VertexShaderVertexFormat(flags, 1, 0, 0);
+				pShaderShadow->EnableTexture(SAMPLER_EMISSIVE, true);
+				pShaderShadow->EnableSRGBRead(SAMPLER_EMISSIVE, true);
+			}
+
+			// s9
+			if (bLightwarpTexture)
+			{
+				pShaderShadow->EnableTexture(SAMPLER_LIGHTWARP, true); 
+				pShaderShadow->EnableSRGBRead(SAMPLER_LIGHTWARP, false);
+			}
+			// s10
+			else if (bThicknessTexture)
+			{
+				pShaderShadow->EnableTexture(SAMPLER_THICKNESS, true); 
+				pShaderShadow->EnableSRGBRead(SAMPLER_THICKNESS, false);
+			}
+
+			// s12, s13, s14
+			if (bHasFlashlight)
+			{
+				pShaderShadow->EnableTexture(SAMPLER_PROJTEXCOOKIE, true);
+				pShaderShadow->EnableSRGBRead(SAMPLER_PROJTEXCOOKIE, true);
+
+				pShaderShadow->EnableTexture(SAMPLER_RANDOMROTATION, true);
+
+				pShaderShadow->EnableTexture(SAMPLER_SHADOWDEPTH, true);
+				pShaderShadow->EnableSRGBRead(SAMPLER_SHADOWDEPTH, false);
+				pShaderShadow->SetShadowDepthFiltering(SAMPLER_SHADOWDEPTH);
 			}
 			else
 			{
-				// We need the position, surface normal, and vertex compression format
-				unsigned int flags = VERTEX_POSITION | VERTEX_NORMAL;
-				// We only need one texcoord, in the default float2 size
-				pShaderShadow->VertexShaderVertexFormat(flags, 3, 0, 0);
-			}
-		
-			// FIXME: Move to Param Init why does it need to be here
-			int useParallax = params[Parallax]->GetIntValue();
-			// Parallax and wrinkle are incompatible
-			if (!mat_pbr_parallaxmap.GetBool() || bWrinkleMapping)
-			{
-				useParallax = 0;
+				// s14
+				if (bHasEnvMap)
+				{
+					pShaderShadow->EnableTexture(SAMPLER_ENVMAP, true); // Envmap
+					if (g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE)
+						pShaderShadow->EnableSRGBRead(SAMPLER_ENVMAP, true); // Envmap is only sRGB with HDR disabled?
+				}
+
+				// s13
+				if (bLightMapped)
+				{
+					pShaderShadow->EnableTexture(SAMPLER_LIGHTMAP, true);       // Lightmap texture
+					pShaderShadow->EnableSRGBRead(SAMPLER_LIGHTMAP, false);     // Lightmaps aren't sRGB
+				}
 			}
 
-			// FIXME: Always pass on TBN from the Vertex Shader
+			//==========================================================================//
+			// Set Static Shaders
+			//==========================================================================//
+
 			// SSAO path
 			bool bWorldNormal = ( ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH ==
 							  ( IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER0 ) + 2 * IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER1 ) ) );
 
 			// FIXME: Split Brushes and Models into two separate Shaders
-			// FIXME: Split Projected Texture into separate Shader
 
 			// Setting up static vertex shader
 			DECLARE_STATIC_VERTEX_SHADER(pbr_vs30);
@@ -380,10 +414,11 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 			if(bHasFlashlight)
 			{
+				// TODO: Check if the ATI Shadow Format Issue was fixed on SFM
 				DECLARE_STATIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
-				SET_STATIC_PIXEL_SHADER_COMBO(FLASHLIGHTDEPTHFILTERMODE, nShadowFilterMode); // TODO: Check if the ATI Shadow Format Issue was fixed on SFM			
+				SET_STATIC_PIXEL_SHADER_COMBO(FLASHLIGHTDEPTHFILTERMODE, g_pHardwareConfig->GetShadowFilterMode());			
 //				SET_STATIC_PIXEL_SHADER_COMBO(SPECULAR, 0); // bHasSpecularTexture
-				SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
+				SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
 				SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
 				SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
 				SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
@@ -397,7 +432,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				SET_STATIC_PIXEL_SHADER_COMBO(USEENVAMBIENT, bUseEnvAmbient);
 				SET_STATIC_PIXEL_SHADER_COMBO(EMISSIVE, bHasEmissionTexture); // FIXME: Make additively rendered pass to save on Samplers
 //				SET_STATIC_PIXEL_SHADER_COMBO(SPECULAR, 0); // bHasSpecularTexture
-				SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
+				SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
 				SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
 //				SET_STATIC_PIXEL_SHADER_COMBO(LightWarpTexture, 0); // bLightwarpTexture
 				SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
@@ -405,39 +440,44 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				SET_STATIC_PIXEL_SHADER(pbr_mrao_ps30);
 			}
 
-			// FIXME: Move up to the rest of snapshot setup ( LUX style )
-			// Setting up fog
-			if (bHasFlashlight)
-				FogToBlack();
-			else
-				DefaultFog(); // I think this is correct
+			//==========================================================================//
+			// PI Command Buffer
+			//==========================================================================//
 
-			// HACK HACK HACK - enable alpha writes all the time so that we have them for underwater stuff
-			pShaderShadow->EnableAlphaWrites(bFullyOpaque);
-
-			// FIXME: All of the below except Color, not on Brushes
 			float flLScale = pShaderShadow->GetLightMapScaleFactor();
 
 			PI_BeginCommandBuffer();
 
-			// Send ambient cube to the pixel sh
-			PI_SetPixelShaderAmbientLightCube( PSREG_AMBIENT_CUBE );
+			if(!bLightMapped)
+			{
+				// Send ambient cube to the pixel sh
+				PI_SetPixelShaderAmbientLightCube( PSREG_AMBIENT_CUBE );
 
-			// Send lighting array to the pixel shader
-			PI_SetPixelShaderLocalLighting( PSREG_LIGHT_INFO_ARRAY );
+				// Send lighting array to the pixel shader
+				PI_SetPixelShaderLocalLighting( PSREG_LIGHT_INFO_ARRAY );
+			}
 
 			// Set up shader modulation color
-			PI_SetModulationPixelShaderDynamicState_LinearScale_ScaleInW( PSREG_DIFFUSE_MODULATION, flLScale );
+			PI_SetModulationPixelShaderDynamicState_LinearScale_ScaleInW( PSREG_DIFFUSE_MODULATION, flLScale );			
 
 			PI_EndCommandBuffer();
 		}
-		// FIXME: Make separate if statement and add some spacing
-		else // Not snapshotting -- begin dynamic state
+
+		//==========================================================================//
+		// Entirely Dynamic Commands
+		//==========================================================================//
+		else if(pShaderAPI)
 		{
+			//==========================================================================//
+			// Bind Textures
+			//==========================================================================//
+
+			// FIXME: Order by Sampler
+
 			bool bLightingOnly = mat_fullbright.GetInt() == 2 && !IS_FLAG_SET(MATERIAL_VAR_NO_DEBUG_OVERRIDE);
 
 			// Setting up albedo texture
-			if (bHasBaseTexture)
+			if (!bLightingOnly && bHasBaseTexture)
 			{
 				BindTexture(SAMPLER_BASECOLOR, BaseTexture, Frame);
 			}
@@ -446,22 +486,9 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				pShaderAPI->BindStandardTexture(SAMPLER_BASECOLOR, TEXTURE_GREY);
 			}
 
-			// Setting up vmt color
-			// FIXME: Standardise
-			Vector4D color( 0, 0, 0, 0 );
-			if (bHasColor)
-			{
-				params[Color1]->GetVecValue(color.Base(), 3);
-			}
-			else
-			{
-				color.Init( 1, 1, 1 );
-			}
-			pShaderAPI->SetPixelShaderConstant(PSREG_SELFILLUMTINT, color.Base());
-
 			// Setting up environment map
-			if (bHasEnvMap)
-			{  
+			if (mat_specular.GetBool() && bHasEnvMap)
+			{
 				// FIXME: EnvMapFrame
 				BindTexture(SAMPLER_ENVMAP, EnvMap, 0); // FIXME: Missing Frame Parameter
 			}
@@ -475,11 +502,6 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			if (bHasEmissionTexture)
 			{
 				BindTexture(SAMPLER_EMISSIVE, EmissionTexture, 0); // FIXME: Missing Frame Parameter
-			}
-			else
-			{
-				// NOTE: The Sampler is always enabled, either this is some magical SFM Requirement or this is non-sense
-				pShaderAPI->BindStandardTexture(SAMPLER_EMISSIVE, TEXTURE_BLACK);
 			}
 
 			// Setting up normal map
@@ -529,6 +551,36 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				BindTexture(SAMPLER_BUMPSTRETCH, BumpStretch, 0); // FIXME: Missing Frame Parameter
 			}
 
+			// Setting lightmap texture
+			if (bLightMapped)
+				s_pShaderAPI->BindStandardTexture(SAMPLER_LIGHTMAP, TEXTURE_LIGHTMAP);
+
+			// Ambient occlusion
+			ITexture* pAOTexture = pShaderAPI->GetTextureRenderingParameter(TEXTURE_RENDERPARM_AMBIENT_OCCLUSION);
+			if (pAOTexture)
+				BindTexture(SAMPLER_SSAO, pAOTexture);
+			else
+				pShaderAPI->BindStandardTexture(SAMPLER_SSAO, TEXTURE_WHITE);
+
+			//==========================================================================//
+			// Setup Constant Registers
+			//==========================================================================//
+
+			// FIXME: Order by Constant Register
+
+			// Setting up vmt color
+			// FIXME: Standardise
+			Vector4D color(0, 0, 0, 0);
+			if (bHasColor)
+			{
+				params[Color1]->GetVecValue(color.Base(), 3);
+			}
+			else
+			{
+				color.Init(1, 1, 1);
+			}
+			pShaderAPI->SetPixelShaderConstant(PSREG_SELFILLUMTINT, color.Base());
+
 			// Getting the light state
 			// FIXME: Model only State
 			LightState_t lightState;
@@ -548,7 +600,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			bool bFlashlightShadows = false;
 			if (bHasFlashlight)
 			{
-				ITexture *pFlashlightDepthTexture;
+				ITexture* pFlashlightDepthTexture;
 				flashlightState = pShaderAPI->GetFlashlightStateEx(flashlightWorldToTexture, &pFlashlightDepthTexture);
 				bFlashlightShadows = flashlightState.m_bEnableShadows && (pFlashlightDepthTexture != NULL);
 
@@ -556,31 +608,17 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 				if (pFlashlightDepthTexture && g_pConfig->ShadowDepthTexture() && flashlightState.m_bEnableShadows)
 				{
+					// FIXME: Move to BindTexture Stage
 					BindTexture(SAMPLER_SHADOWDEPTH, pFlashlightDepthTexture, 0);
 					pShaderAPI->BindStandardTexture(SAMPLER_RANDOMROTATION, TEXTURE_SHADOW_NOISE_2D);
 				}
+				else
+				{
+					// Always bind Things to your Samplers or expect corrupted Results
+					pShaderAPI->BindStandardTexture(SAMPLER_SHADOWDEPTH, TEXTURE_BLACK);
+					pShaderAPI->BindStandardTexture(SAMPLER_RANDOMROTATION, TEXTURE_BLACK);
+				}
 			}
-
-			// FIXME: All of this
-			// ---
-			// Getting fog info
-			MaterialFogMode_t fogType = pShaderAPI->GetSceneFogMode();
-//          int fogIndex = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z) ? 1 : 0;
-
-			// Getting skinning info
-			int numBones = pShaderAPI->GetCurrentNumBones();
-
-			// Some debugging stuff
-			bool bWriteDepthToAlpha = false;
-			bool bWriteWaterFogToAlpha = false;
-			if (bFullyOpaque)
-			{
-				bWriteDepthToAlpha = pShaderAPI->ShouldWriteDepthToDestAlpha();
-				bWriteWaterFogToAlpha = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z);
-				AssertMsg(!(bWriteDepthToAlpha && bWriteWaterFogToAlpha),
-						"Can't write two values to alpha at the same time.");
-			}
-			// ---
 
 			float vEyePos_SpecExponent[4];
 			pShaderAPI->GetWorldSpaceCameraPosition(vEyePos_SpecExponent);
@@ -611,68 +649,12 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			vEyePos_SpecExponent[3] = iEnvMapLOD;
 			pShaderAPI->SetPixelShaderConstant(PSREG_EYEPOS_SPEC_EXPONENT, vEyePos_SpecExponent, 1);
 
-			// Setting lightmap texture
-			if (bLightMapped)
-				s_pShaderAPI->BindStandardTexture(SAMPLER_LIGHTMAP, TEXTURE_LIGHTMAP);
-
-			// Setting up dynamic vertex shader
-			DECLARE_DYNAMIC_VERTEX_SHADER(pbr_vs30);
-//          SET_DYNAMIC_VERTEX_SHADER_COMBO(DOWATERFOG, fogIndex);
-			SET_DYNAMIC_VERTEX_SHADER_COMBO(SKINNING, numBones > 0);
-			SET_DYNAMIC_VERTEX_SHADER_COMBO(COMPRESSED_VERTS, (int)vertexCompression);
-//          SET_DYNAMIC_VERTEX_SHADER_COMBO(NUM_LIGHTS, lightState.m_nNumLights);
-			SET_DYNAMIC_VERTEX_SHADER(pbr_vs30);
-
-			// Setting up dynamic pixel shader
-			// FIXME: Optimize Dynamic Combos. This is long compiletimes for no Reason
-			if (bHasFlashlight)
-			{
-				DECLARE_DYNAMIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, bFlashlightShadows);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(UBERLIGHT, flashlightState.m_bUberlight);
-				SET_DYNAMIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
-			}
-			else
-			{
-				DECLARE_DYNAMIC_PIXEL_SHADER(pbr_mrao_ps30);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_LIGHTS, lightState.m_nNumLights);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITEWATERFOGTODESTALPHA, bWriteWaterFogToAlpha);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
-				SET_DYNAMIC_PIXEL_SHADER(pbr_mrao_ps30);
-			}
-
-
 			// Setting up base texture transform
 			// FIXME: Use a Macro Map for this because I don't trust these random Enums that love to vary across branches
 			SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, BaseTextureTransform);
 
-			// FIXME: This is non-sense because we derive metal color from the BaseColor
-			// FIXME: Duplicate Texture Bind, happens above for regular BaseTexture
-			// Handle mat_fullbright 2 (diffuse lighting only)
-			if (bLightingOnly)
-			{
-				pShaderAPI->BindStandardTexture(SAMPLER_BASECOLOR, TEXTURE_GREY); // Basecolor
-			}
-
-			// FIXME: Duplicate Texture Bind, move this to where $EnvMap is handled
-			// Handle mat_specular 0 (no envmap reflections)
-			if (!mat_specular.GetBool())
-			{
-				pShaderAPI->BindStandardTexture(SAMPLER_ENVMAP, TEXTURE_BLACK); // Envmap
-			}
-
 			// Sending fog info to the pixel shader
 			pShaderAPI->SetPixelShaderFogParams(PSREG_FOG_PARAMS);
-
-			// Ambient occlusion
-			ITexture* pAOTexture = pShaderAPI->GetTextureRenderingParameter( TEXTURE_RENDERPARM_AMBIENT_OCCLUSION );
-
-			if (pAOTexture)
-				BindTexture( SAMPLER_SSAO, pAOTexture );
-			else
-				pShaderAPI->BindStandardTexture( SAMPLER_SSAO, TEXTURE_WHITE );
 
 			// Metalness, roughtness, ambient occlusion, SSAO Factors
 			float flSSAOStrength = 1.0f;
@@ -690,32 +672,32 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			// Emissive, specular factors, SSS intensity and power scale 
 			float vExtraFactors[4] =
 			{
-				GetFloatParam( EmissiveFactor, params, 1.0f ),
-				GetFloatParam( SpecularFactor, params, 1.0f ), // Wat? What is the point of $MetalnessFactor if we end up having two Parameters to handle the same Thing
-				GetFloatParam( SSSIntensity, params, 1.0f ),
-				GetFloatParam( SSSPowerScale, params, 1.0f )
+				GetFloatParam(EmissiveFactor, params, 1.0f),
+				GetFloatParam(SpecularFactor, params, 1.0f), // Wat? What is the point of $MetalnessFactor if we end up having two Parameters to handle the same Thing
+				GetFloatParam(SSSIntensity, params, 1.0f),
+				GetFloatParam(SSSPowerScale, params, 1.0f)
 			};
 			pShaderAPI->SetPixelShaderConstant(PSREG_PBR_EXTRA_FACTORS, vExtraFactors, 1);
 
 			float vSSSColor[4] = { 0, 0, 0, 0 };
-			params[SSSCOLOR]->GetVecValue( vSSSColor, 3 );
-			pShaderAPI->SetPixelShaderConstant( PSREG_PBR_SSS_COLOR, vSSSColor, 1 );
+			params[SSSCOLOR]->GetVecValue(vSSSColor, 3);
+			pShaderAPI->SetPixelShaderConstant(PSREG_PBR_SSS_COLOR, vSSSColor, 1);
 
 			// Need this for sampling SSAO
 			pShaderAPI->SetScreenSizeForVPOS();
 
 			// Pass FarZ for SSAO
-			int nLightingPreviewMode = pShaderAPI->GetIntRenderingParameter( INT_RENDERPARM_ENABLE_FIXED_LIGHTING );
-			if ( nLightingPreviewMode == ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH )
+			int nLightingPreviewMode = pShaderAPI->GetIntRenderingParameter(INT_RENDERPARM_ENABLE_FIXED_LIGHTING);
+			if (nLightingPreviewMode == ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH)
 			{
 				float vEyeDir[4];
-				pShaderAPI->GetWorldSpaceCameraDirection( vEyeDir );
+				pShaderAPI->GetWorldSpaceCameraDirection(vEyeDir);
 
 				float flFarZ = pShaderAPI->GetFarZ();
 				vEyeDir[0] /= flFarZ;	// Divide by farZ for SSAO algorithm
 				vEyeDir[1] /= flFarZ;
 				vEyeDir[2] /= flFarZ;
-				pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_8, vEyeDir );
+				pShaderAPI->SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_8, vEyeDir);
 			}
 
 			// More flashlight related stuff
@@ -752,19 +734,70 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				SetupUberlightFromState(pShaderAPI, flashlightState);
 			}
 
-			// HAHAHHAHA The same slop-code as the original Shader
-			// FIXME: Unbracketed Code
+			if(bHasParallax)
+			{			
+				float flParams[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+				// Parallax Depth (the strength of the effect)
+				flParams[0] = GetFloatParam(ParallaxDepth, params, 3.0f);
+				// Parallax Center (the height at which it's not moved)
+				flParams[1] = GetFloatParam(ParallaxCenter, params, 3.0f);
+				pShaderAPI->SetPixelShaderConstant(PSREG_SHADER_CONTROLS, flParams, 1);
+			}
 
-			float flParams[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			// Parallax Depth (the strength of the effect)
-			flParams[0] = GetFloatParam(ParallaxDepth, params, 3.0f);
-			// Parallax Center (the height at which it's not moved)
-			flParams[1] = GetFloatParam(ParallaxCenter, params, 3.0f);
-			pShaderAPI->SetPixelShaderConstant(PSREG_SHADER_CONTROLS, flParams, 1);
+			//==========================================================================//
+			// Set Dynamic Shaders
+			//==========================================================================//
 
+			// FIXME: All of this
+			// ---
+			// Getting fog info
+			MaterialFogMode_t fogType = pShaderAPI->GetSceneFogMode();
+//          int fogIndex = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z) ? 1 : 0;
+
+			// Getting skinning info
+			int numBones = pShaderAPI->GetCurrentNumBones();
+
+			// Some debugging stuff
+			bool bWriteDepthToAlpha = false;
+			bool bWriteWaterFogToAlpha = false;
+			if (bFullyOpaque)
+			{
+				bWriteDepthToAlpha = pShaderAPI->ShouldWriteDepthToDestAlpha();
+				bWriteWaterFogToAlpha = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z);
+				AssertMsg(!(bWriteDepthToAlpha && bWriteWaterFogToAlpha),
+						"Can't write two values to alpha at the same time.");
+			}
+			// ---
+
+			// Setting up dynamic vertex shader
+			DECLARE_DYNAMIC_VERTEX_SHADER(pbr_vs30);
+//          SET_DYNAMIC_VERTEX_SHADER_COMBO(DOWATERFOG, fogIndex);
+			SET_DYNAMIC_VERTEX_SHADER_COMBO(SKINNING, numBones > 0);
+			SET_DYNAMIC_VERTEX_SHADER_COMBO(COMPRESSED_VERTS, (int)vertexCompression);
+//          SET_DYNAMIC_VERTEX_SHADER_COMBO(NUM_LIGHTS, lightState.m_nNumLights);
+			SET_DYNAMIC_VERTEX_SHADER(pbr_vs30);
+
+			// Setting up dynamic pixel shader
+			// FIXME: Optimize Dynamic Combos. This is long compiletimes for no Reason
+			if (bHasFlashlight)
+			{
+				DECLARE_DYNAMIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, bFlashlightShadows);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(UBERLIGHT, flashlightState.m_bUberlight);
+				SET_DYNAMIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
+			}
+			else
+			{
+				DECLARE_DYNAMIC_PIXEL_SHADER(pbr_mrao_ps30);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_LIGHTS, lightState.m_nNumLights);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITEWATERFOGTODESTALPHA, bWriteWaterFogToAlpha);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
+				SET_DYNAMIC_PIXEL_SHADER(pbr_mrao_ps30);
+			}
 		}
 
-		// Actually draw the shader
 	   Draw();
 
 	   // TODO: DepthToDestAlpha for Alphatested Materials?
