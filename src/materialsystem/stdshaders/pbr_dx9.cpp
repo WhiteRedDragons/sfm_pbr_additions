@@ -17,6 +17,8 @@
 #include "pbr_mrao_ps30.inc"
 #include "pbr_mrao_projtex_ps30.inc"
 
+#define SFM_BLACKBOX_MODE
+
 // M/R and S/G
 const Sampler_t SAMPLER_BASECOLOR		= SHADER_SAMPLER0;
 const Sampler_t SAMPLER_DIFFUSE			= SHADER_SAMPLER0;
@@ -48,6 +50,7 @@ const Sampler_t SAMPLER_RANDOMROTATION	= SHADER_SAMPLER13;
 const Sampler_t SAMPLER_SHADOWDEPTH		= SHADER_SAMPLER14;
 
 // Convars
+static ConVar pbr_version("pbr_version", "1.00", FCVAR_CHEAT);
 static ConVar mat_fullbright("mat_fullbright", "0", FCVAR_CHEAT);
 static ConVar mat_specular("mat_specular", "1", FCVAR_NONE);
 static ConVar mat_pbr_parallaxmap("mat_pbr_parallaxmap", "1");
@@ -218,8 +221,14 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		bool bHasNormalTexture = params[BumpMap]->IsTexture();
 		bool bHasMraoTexture = params[MRAOTexture]->IsTexture();
 //		bool bHasSpecularTexture = !bHasMraoTexture && params[SpecularTexture]->IsTexture();
-		bool bHasEnvMap = params[EnvMap]->IsTexture();
 		bool bHasEmissionTexture = params[EmissionTexture]->IsTexture();
+#ifndef SFM_BLACKBOX_MODE
+		bool bHasEnvMap = params[EnvMap]->IsTexture();
+
+		// NUKE: Non-sense or force. Why is there two of different ways of deriving Ambient
+		// Physically based workarounds
+		bool bUseEnvAmbient = params[UseEnvAmbient]->GetIntValue();
+#endif
 
 		// IsDefined() is not real on Shader Draw; This doesn't make any sense
 		bool bHasColor = true; // params[Color1]->IsDefined();
@@ -228,9 +237,6 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		// FIXME: just nuke Brush Support, who is going to use this on SFM
 		bool bLightMapped = !IS_FLAG_SET(MATERIAL_VAR_MODEL);
 
-		// NUKE: Non-sense or force. Why is there two of different ways of deriving Ambient
-		// Physically based workarounds
-		bool bUseEnvAmbient = params[UseEnvAmbient]->GetIntValue();
 
 		bool bThicknessTexture = !bLightMapped && params[ThicknessTexture]->IsTexture();
 
@@ -381,12 +387,14 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			else
 			{
 				// s14
+#ifndef SFM_BLACKBOX_MODE
 				if (bHasEnvMap)
 				{
 					pShaderShadow->EnableTexture(SAMPLER_ENVMAP, true); // Envmap
 					if (g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE)
 						pShaderShadow->EnableSRGBRead(SAMPLER_ENVMAP, true); // Envmap is only sRGB with HDR disabled?
 				}
+#endif
 
 				// s13
 				if (bLightMapped)
@@ -429,7 +437,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			{
 				DECLARE_STATIC_PIXEL_SHADER(pbr_mrao_ps30);
 //				SET_STATIC_PIXEL_SHADER_COMBO(LIGHTMAPPED, 0); // bLightMapped
-				SET_STATIC_PIXEL_SHADER_COMBO(USEENVAMBIENT, bUseEnvAmbient);
+//				SET_STATIC_PIXEL_SHADER_COMBO(USEENVAMBIENT, bUseEnvAmbient); // SFM_BLACKBOX_MODE
 				SET_STATIC_PIXEL_SHADER_COMBO(EMISSIVE, bHasEmissionTexture); // FIXME: Make additively rendered pass to save on Samplers
 //				SET_STATIC_PIXEL_SHADER_COMBO(SPECULAR, 0); // bHasSpecularTexture
 				SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
@@ -450,8 +458,10 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 			if(!bLightMapped)
 			{
+#ifndef SFM_BLACKBOX_MODE
 				// Send ambient cube to the pixel sh
 				PI_SetPixelShaderAmbientLightCube( PSREG_AMBIENT_CUBE );
+#endif
 
 				// Send lighting array to the pixel shader
 				PI_SetPixelShaderLocalLighting( PSREG_LIGHT_INFO_ARRAY );
@@ -487,6 +497,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			}
 
 			// Setting up environment map
+#ifndef SFM_BLACKBOX_MODE
 			if (mat_specular.GetBool() && bHasEnvMap)
 			{
 				// FIXME: EnvMapFrame
@@ -497,6 +508,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				// This is also the mat_specular 0 Case that for some Reason is handled way below
 				pShaderAPI->BindStandardTexture(SAMPLER_ENVMAP, TEXTURE_BLACK);
 			}
+#endif
 
 			// Setting up emissive texture
 			if (bHasEmissionTexture)
@@ -625,6 +637,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			float vEyePos_SpecExponent[4];
 			pShaderAPI->GetWorldSpaceCameraPosition(vEyePos_SpecExponent);
 
+#ifndef SFM_BLACKBOX_MODE
 			// FIXME: Add a warning, force people to have an adequate EnvMap Resolution
 			// FIXME: Could be stored in Context Data?
 			int iEnvMapLOD = 6;
@@ -649,6 +662,8 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 			// This has some spare space
 			vEyePos_SpecExponent[3] = iEnvMapLOD;
+#endif
+
 			pShaderAPI->SetPixelShaderConstant(PSREG_EYEPOS_SPEC_EXPONENT, vEyePos_SpecExponent, 1);
 
 			// Setting up base texture transform

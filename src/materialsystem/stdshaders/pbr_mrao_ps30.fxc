@@ -11,7 +11,6 @@
 // FIXME: Determine whether UBERLIGHT is an Extension of FLASHLIGHTSHADOWS
 // FIXME: A lot of the non SPECULAR Code is still ran under SPECULAR. Just make this a separate Shader honestly
 // @STATIC: "LIGHTMAPPED"                "0..0"
-// STATIC: "USEENVAMBIENT"              "0..1"
 // STATIC: "EMISSIVE"                   "0..1"
 // @STATIC: "SPECULAR"                   "0..0"
 // STATIC: "PARALLAXOCCLUSION"          "0..1"
@@ -19,6 +18,8 @@
 // @STATIC: "LIGHTWARPTEXTURE"			"0..0"
 // STATIC: "WRINKLEMAP"					"0..1"
 // STATIC: "SUBSURFACESCATTERING"		"0..1"
+
+// @STATIC: "USEENVAMBIENT"             "0..1"
 
 // DYNAMIC: "WRITEWATERFOGTODESTALPHA"  "0..1"
 // DYNAMIC: "PIXELFOGTYPE"              "0..2"

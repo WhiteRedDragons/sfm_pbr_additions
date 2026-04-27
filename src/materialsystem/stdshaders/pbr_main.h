@@ -6,6 +6,7 @@
 
 #include "pbr_common_ps2_3_x.h"
 
+#define SFM_BLACKBOX_MODE 1
 
 // FIXME: Register Macros dedicated to this Shader. Stop copy pasting Stock Shader Slop 
 const float4 cBaseColor								: register(PSREG_SELFILLUMTINT);
@@ -255,44 +256,46 @@ float4 main(PS_INPUT i) : COLOR
 	// FIXME: Variable Names VIII - Roman Numerals are going to get very hard soon. We call it "diffuseIrradiance" below and then "diffuseIBL"
 	// Oh but THIS? No this is just "Ambient Lighting" because we couldn't find something that sounded worse
 	float3 f3IndirectLighting = 0.0;
-	#if !FLASHLIGHT
-	{
-		// FIXME: This is terrible, this should be split up drastically. Models and Brushes are two very different Lighting Models
-		float3 f3DiffuseLighting = ambientLookup(f3NormalWS, EnvAmbientCube, f3NormalTS, i.LightmapTexCoord1And2, i.LightmapTexCoord3, Sampler_Lightmap, cDiffuseModulation);
+	#if !SFM_BLACKBOX_MODE
+		#if !FLASHLIGHT
+		{
+			// FIXME: This is terrible, this should be split up drastically. Models and Brushes are two very different Lighting Models
+			float3 f3DiffuseLighting = ambientLookup(f3NormalWS, EnvAmbientCube, f3NormalTS, i.LightmapTexCoord1And2, i.LightmapTexCoord3, Sampler_Lightmap, cDiffuseModulation);
 
-		// FIXME: Nuke Schlick Fresnel and replace with UE4 Fresnel
-		float3 f3AmbientLightingFresnelTerm = fresnelSchlickRoughness(f3SpecularColor, f1NdotV, f1Roughness);
+			// FIXME: Nuke Schlick Fresnel and replace with UE4 Fresnel
+			float3 f3AmbientLightingFresnelTerm = fresnelSchlickRoughness(f3SpecularColor, f1NdotV, f1Roughness);
 
-		// YIKES what is THIS
-		// Where is BRDF I thought this is PBR
-	#if SPECULAR
-		float3 f3DiffuseContributionFactor = 1.0f - f3AmbientLightingFresnelTerm;
-	#else
-		float3 f3DiffuseContributionFactor = lerp(1.0f - f3AmbientLightingFresnelTerm, 0.0f, f1Metalness);;
-	#endif
-		f3DiffuseLighting = f3DiffuseContributionFactor * f3DiffuseColor * f3DiffuseLighting; // To Pi or not to PI mhmhmmh
+			// YIKES what is THIS
+			// Where is BRDF I thought this is PBR
+		#if SPECULAR
+			float3 f3DiffuseContributionFactor = 1.0f - f3AmbientLightingFresnelTerm;
+		#else
+			float3 f3DiffuseContributionFactor = lerp(1.0f - f3AmbientLightingFresnelTerm, 0.0f, f1Metalness);;
+		#endif
+			f3DiffuseLighting = f3DiffuseContributionFactor * f3DiffuseColor * f3DiffuseLighting; // To Pi or not to PI mhmhmmh
 
-		// "UV" I call it R but that's whatever
-		// Note how we use roughness here and not roughness²
-		// You can bet that no one ever checked whether linear Roughness is more correct on UNFILTERED CUBEMAPS
-		// I say this because ENVMAPLOD doesn't make any sense and no one checked whether that was correct
-		float4 f4ReflectUV = float4(f3Reflect, f1Roughness * g_f1EnvMapMips);
-		float3 f3LookupHigh = ENV_MAP_SCALE * texCUBElod(Sampler_Envmap, f4ReflectUV).rgb;
-		float3 f3LookupLow = PixelShaderAmbientLight(f4ReflectUV, EnvAmbientCube).rgb; // FIXME: Truncation of Vector Type that we shouldn't have here
+			// "UV" I call it R but that's whatever
+			// Note how we use roughness here and not roughness²
+			// You can bet that no one ever checked whether linear Roughness is more correct on UNFILTERED CUBEMAPS
+			// I say this because ENVMAPLOD doesn't make any sense and no one checked whether that was correct
+			float4 f4ReflectUV = float4(f3Reflect, f1Roughness * g_f1EnvMapMips);
+			float3 f3LookupHigh = ENV_MAP_SCALE * texCUBElod(Sampler_Envmap, f4ReflectUV).rgb;
+			float3 f3LookupLow = PixelShaderAmbientLight(f4ReflectUV, EnvAmbientCube).rgb; // FIXME: Truncation of Vector Type that we shouldn't have here
 
-		// NUKE: This is a Hack. Remove it 
-		// Get proper Cubemaps or you are not using PBR
-//		float3 f3IndirectSpecular = lerp(lookupHigh, lookupLow, roughness * roughness);
-		float3 f3IndirectSpecular = f3LookupHigh;
-	
-		// EnvBRDFApprox is ironically the most correct thing here
-		f3IndirectSpecular *= EnvBRDFApprox(f3SpecularColor, f1Roughness, f1NdotV);
-	
-		// Note that Brushes get Lightmaps with Direct and Indirect Lighting combined
-		// So this is Direct Diffuse + Indirect Diffuse + Indirect Specular for Brushes
-		// Mostly correct for us
-		f3IndirectLighting = (f3DiffuseLighting + f3IndirectSpecular) * f1AmbientOcclusion;
-	}
+			// NUKE: This is a Hack. Remove it 
+			// Get proper Cubemaps or you are not using PBR
+//			float3 f3IndirectSpecular = lerp(lookupHigh, lookupLow, roughness * roughness);
+			float3 f3IndirectSpecular = f3LookupHigh;
+		
+			// EnvBRDFApprox is ironically the most correct thing here
+			f3IndirectSpecular *= EnvBRDFApprox(f3SpecularColor, f1Roughness, f1NdotV);
+		
+			// Note that Brushes get Lightmaps with Direct and Indirect Lighting combined
+			// So this is Direct Diffuse + Indirect Diffuse + Indirect Specular for Brushes
+			// Mostly correct for us
+			f3IndirectLighting = (f3DiffuseLighting + f3IndirectSpecular) * f1AmbientOcclusion;
+		}
+		#endif
 	#endif
 	
 	// Start direct

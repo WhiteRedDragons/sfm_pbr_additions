@@ -25,14 +25,12 @@
 #include "shaderlib/cshader.h"
 class pbr_mrao_ps30_Static_Index
 {
-	unsigned int m_nUSEENVAMBIENT : 2;
 	unsigned int m_nEMISSIVE : 2;
 	unsigned int m_nPARALLAXOCCLUSION : 2;
 	unsigned int m_nWORLD_NORMAL : 2;
 	unsigned int m_nWRINKLEMAP : 2;
 	unsigned int m_nSUBSURFACESCATTERING : 2;
 #ifdef _DEBUG
-	bool m_bUSEENVAMBIENT : 1;
 	bool m_bEMISSIVE : 1;
 	bool m_bPARALLAXOCCLUSION : 1;
 	bool m_bWORLD_NORMAL : 1;
@@ -40,15 +38,6 @@ class pbr_mrao_ps30_Static_Index
 	bool m_bSUBSURFACESCATTERING : 1;
 #endif	// _DEBUG
 public:
-	void SetUSEENVAMBIENT( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nUSEENVAMBIENT = i;
-#ifdef _DEBUG
-		m_bUSEENVAMBIENT = true;
-#endif	// _DEBUG
-	}
-
 	void SetEMISSIVE( int i )
 	{
 		Assert( i >= 0 && i <= 1 );
@@ -96,14 +85,12 @@ public:
 
 	pbr_mrao_ps30_Static_Index(  )
 	{
-		m_nUSEENVAMBIENT = 0;
 		m_nEMISSIVE = 0;
 		m_nPARALLAXOCCLUSION = 0;
 		m_nWORLD_NORMAL = 0;
 		m_nWRINKLEMAP = 0;
 		m_nSUBSURFACESCATTERING = 0;
 #ifdef _DEBUG
-		m_bUSEENVAMBIENT = false;
 		m_bEMISSIVE = false;
 		m_bPARALLAXOCCLUSION = false;
 		m_bWORLD_NORMAL = false;
@@ -114,14 +101,14 @@ public:
 
 	int GetIndex() const
 	{
-		Assert( m_bUSEENVAMBIENT && m_bEMISSIVE && m_bPARALLAXOCCLUSION && m_bWORLD_NORMAL && m_bWRINKLEMAP && m_bSUBSURFACESCATTERING );
+		Assert( m_bEMISSIVE && m_bPARALLAXOCCLUSION && m_bWORLD_NORMAL && m_bWRINKLEMAP && m_bSUBSURFACESCATTERING );
 		AssertMsg( !( ( m_nWRINKLEMAP != 0 ) && ( m_nPARALLAXOCCLUSION != 0 ) ), "Invalid combo combination ( ( WRINKLEMAP != 0 ) && ( PARALLAXOCCLUSION != 0 ) )" );
 		AssertMsg( !( ( m_nSUBSURFACESCATTERING != 0 ) && ( m_nPARALLAXOCCLUSION != 0 ) ), "Invalid combo combination ( ( SUBSURFACESCATTERING != 0 ) && ( PARALLAXOCCLUSION != 0 ) )" );
-		return ( 60 * m_nUSEENVAMBIENT ) + ( 120 * m_nEMISSIVE ) + ( 240 * m_nPARALLAXOCCLUSION ) + ( 480 * m_nWORLD_NORMAL ) + ( 960 * m_nWRINKLEMAP ) + ( 1920 * m_nSUBSURFACESCATTERING ) + 0;
+		return ( 60 * m_nEMISSIVE ) + ( 120 * m_nPARALLAXOCCLUSION ) + ( 240 * m_nWORLD_NORMAL ) + ( 480 * m_nWRINKLEMAP ) + ( 960 * m_nSUBSURFACESCATTERING ) + 0;
 	}
 };
 
-#define shaderStaticTest_pbr_mrao_ps30 psh_forgot_to_set_static_USEENVAMBIENT + psh_forgot_to_set_static_EMISSIVE + psh_forgot_to_set_static_PARALLAXOCCLUSION + psh_forgot_to_set_static_WORLD_NORMAL + psh_forgot_to_set_static_WRINKLEMAP + psh_forgot_to_set_static_SUBSURFACESCATTERING
+#define shaderStaticTest_pbr_mrao_ps30 psh_forgot_to_set_static_EMISSIVE + psh_forgot_to_set_static_PARALLAXOCCLUSION + psh_forgot_to_set_static_WORLD_NORMAL + psh_forgot_to_set_static_WRINKLEMAP + psh_forgot_to_set_static_SUBSURFACESCATTERING
 
 
 class pbr_mrao_ps30_Dynamic_Index
