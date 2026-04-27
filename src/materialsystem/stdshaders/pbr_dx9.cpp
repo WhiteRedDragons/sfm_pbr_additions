@@ -217,7 +217,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		bool bHasBaseTexture = params[BaseTexture]->IsTexture();
 		bool bHasNormalTexture = params[BumpMap]->IsTexture();
 		bool bHasMraoTexture = params[MRAOTexture]->IsTexture();
-		bool bHasSpecularTexture = !bHasMraoTexture && params[SpecularTexture]->IsTexture();
+//		bool bHasSpecularTexture = !bHasMraoTexture && params[SpecularTexture]->IsTexture();
 		bool bHasEnvMap = params[EnvMap]->IsTexture();
 		bool bHasEmissionTexture = params[EmissionTexture]->IsTexture();
 
@@ -466,7 +466,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		//==========================================================================//
 		// Entirely Dynamic Commands
 		//==========================================================================//
-		else if(pShaderAPI)
+		if(pShaderAPI)
 		{
 			//==========================================================================//
 			// Bind Textures
@@ -525,6 +525,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				pShaderAPI->BindStandardTexture(SAMPLER_MRAO, TEXTURE_WHITE);
 			}
 
+			/*
 			if (bHasSpecularTexture)
 			{
 				BindTexture(SAMPLER_SPECULAR, SpecularTexture, 0); // FIXME: Missing Frame Parameter
@@ -533,6 +534,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			{
 				pShaderAPI->BindStandardTexture(SAMPLER_SPECULAR, TEXTURE_BLACK);
 			}
+			*/
 
 			if (bThicknessTexture)
 			{
