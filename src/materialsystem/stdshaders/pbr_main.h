@@ -15,7 +15,12 @@ const float4 cBaseColor								: register(PSREG_SELFILLUMTINT);
 const float4 cDiffuseModulation						: register(PSREG_DIFFUSE_MODULATION);
 
 const float4 cShadowTweaks							: register(PSREG_ENVMAP_TINT__SHADOW_TWEAKS);
-// Missing c3 here
+
+#if DUALLOBE
+const float4 cDualLobeControls						: register(PSREG_SELFILLUM_SCALE_BIAS_EXP);
+#define g_f1DualLobe_RoughnessBias	(cDualLobeControls.x)
+#define g_f1DualLobe_LerpFactor		(cDualLobeControls.y)
+#endif
 
 const float3 cAmbientCube[6]						: register(PSREG_AMBIENT_CUBE);
 // Missing c10 here
@@ -207,7 +212,11 @@ float4 main(PS_INPUT i) : COLOR
 	float f1Metalness = f4MRAOTexture.x;
 	float f1Roughness = f4MRAOTexture.y;
 	float f1AmbientOcclusion = f4MRAOTexture.z;
-	
+
+	#if DUALLOBE
+		float f1SecondaryRoughness = saturate(f1Roughness + g_f1DualLobe_RoughnessBias);
+	#endif
+
 	// TODO: This is needed at the end, make it easier for the Compiler to optimize it by putting it well, at the end where it's used
 	#if EMISSIVE
 		float3 f3Emission = tex2D(Sampler_EmissionTexture, f2TexCoord).xyz * g_f1EmissiveFactor;
@@ -318,9 +327,19 @@ float4 main(PS_INPUT i) : COLOR
 			f3LightColor *= lerp(1.0f, f1MicroShadow, g_f1MicroShadowFactor);
 	
 			// Diffuse and Specular
-			f3DirectLighting += calculateLight(f3LightDir, f3LightColor, f3ViewDir,
-					f3NormalWS, f3SpecularColor, f1Roughness, f1Metalness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp);
-	
+
+			float3 f3DirectAndSpecular = calculateLight(f3LightDir, f3LightColor, f3ViewDir,
+				f3NormalWS, f3SpecularColor, f1Roughness, f1Metalness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp);
+
+			#if DUALLOBE
+				float3 f3SecondaryDirectAndSpecular = calculateLight(f3LightDir, f3LightColor, f3ViewDir,
+					f3NormalWS, f3SpecularColor, f1SecondaryRoughness, f1Metalness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp);
+			
+				f3DirectLighting += lerp(f3DirectAndSpecular, f3SecondaryDirectAndSpecular, g_f1DualLobe_LerpFactor);
+			#else
+				f3DirectLighting += f3DirectAndSpecular;
+			#endif
+
 			// FIXME: This should all be one BRDF
 			#if SUBSURFACESCATTERING
 			float3 f3SSSContribution = ComputeSubsurfaceScattering(f3NormalWS, f3LightDir, f3ViewDir,
@@ -377,10 +396,20 @@ float4 main(PS_INPUT i) : COLOR
 		float f1MicroShadow = ApplyMicroShadow(f1AmbientOcclusion, f3NormalWS, flashLightIn, 1.0f);
 		flashLightIntensity *= lerp(1.0f, f1MicroShadow, g_f1MicroShadowFactor);
 	
-		// FIXME: Why is there a saturation here? That doesn't make any sense
-		f3DirectLighting += max(0, calculateLight(flashLightIn, flashLightIntensity, f3ViewDir,
-				f3NormalWS, f3SpecularColor, f1Roughness, f1Metalness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp));
+		// FIXME: The max(0, ) here implies a SERIOUS mathematical Problem
+		float3 f3DirectAndSpecular = max(0, calculateLight(flashLightIn, flashLightIntensity, f3ViewDir,
+			f3NormalWS, f3SpecularColor, f1Roughness, f1Metalness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp));
+
+		#if DUALLOBE
+			float3 f3SecondaryDirectAndSpecular = max(0, calculateLight(flashLightIn, flashLightIntensity, f3ViewDir,
+				f3NormalWS, f3SpecularColor, f1SecondaryRoughness, f1Metalness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp));
+		
+			f3DirectLighting += lerp(f3DirectAndSpecular, f3SecondaryDirectAndSpecular, g_f1DualLobe_LerpFactor);
+		#else
+			f3DirectLighting += f3DirectAndSpecular;
+		#endif
 	
+		// FIXME: This should all be one BRDF
 		#if SUBSURFACESCATTERING
 			float3 f3SSSContribution = ComputeSubsurfaceScattering(f3NormalWS, flashLightIn, f3ViewDir,
 				f1Thickness, g_f3SSSColor, g_f1SSSIntensity, g_f1SSSPower);

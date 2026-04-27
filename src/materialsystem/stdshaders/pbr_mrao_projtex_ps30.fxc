@@ -12,6 +12,7 @@
 // STATIC: "WORLD_NORMAL"				"0..1"
 // STATIC: "WRINKLEMAP"					"0..1"
 // STATIC: "SUBSURFACESCATTERING"		"0..1"
+// STATIC: "DUALLOBE"                   "0..1"
 
 // DYNAMIC: "PIXELFOGTYPE"              "0..2"
 // DYNAMIC: "FLASHLIGHTSHADOWS"         "0..1"

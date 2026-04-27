@@ -21,6 +21,8 @@
 
 // @STATIC: "USEENVAMBIENT"             "0..1"
 
+// STATIC:  "DUALLOBE"                  "0..1"
+
 // DYNAMIC: "WRITEWATERFOGTODESTALPHA"  "0..1"
 // DYNAMIC: "PIXELFOGTYPE"              "0..2"
 // DYNAMIC: "NUM_LIGHTS"                "0..4"

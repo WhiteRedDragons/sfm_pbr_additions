@@ -65,30 +65,34 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 	// Setting up vmt parameters
 	// FIXME: Capslocked Parameter Names are hard to read and this is only a thing because everyone copies the Code from Valve
 	BEGIN_SHADER_PARAMS;
-		SHADER_PARAM(AlphaTestReference, SHADER_PARAM_TYPE_FLOAT, "0", "")
-		SHADER_PARAM(EnvMap, SHADER_PARAM_TYPE_ENVMAP, "", "Set the cubemap for this material.")
-		SHADER_PARAM(MRAOTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Texture with metalness in R, roughness in G, ambient occlusion in B.")
-		SHADER_PARAM(EmissionTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Emission texture")
-		SHADER_PARAM(NormalTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture (deprecated, use $bumpmap)")
-		SHADER_PARAM(BumpMap, SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture")
-		SHADER_PARAM(BumpFrame, SHADER_PARAM_TYPE_INTEGER, "0", "Frame number for $bumpmap")
-		SHADER_PARAM(UseEnvAmbient, SHADER_PARAM_TYPE_BOOL, "0", "Use the cubemaps to compute ambient light.")
-		SHADER_PARAM(SpecularTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Specular F0 RGB map")
-		SHADER_PARAM(LightWarpTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Lightwarp Texture" )
-		SHADER_PARAM(ThicknessTexture, SHADER_PARAM_TYPE_TEXTURE, "", "Thickness map for SSS" )
-		SHADER_PARAM(Parallax, SHADER_PARAM_TYPE_BOOL, "0", "Use Parallax Occlusion Mapping.")
-		SHADER_PARAM(ParallaxDepth, SHADER_PARAM_TYPE_FLOAT, "0.0030", "Depth of the Parallax Map")
-		SHADER_PARAM(ParallaxCenter, SHADER_PARAM_TYPE_FLOAT, "0.5", "Center depth of the Parallax Map")
-		SHADER_PARAM(EmissiveFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Emissive factor" )
-		SHADER_PARAM(SpecularFactor, SHADER_PARAM_TYPE_FLOAT, "1.0", "Specular factor" )
-		SHADER_PARAM(SSSCOLOR, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Subsurface scattering color")
-		SHADER_PARAM(SSSIntensity, SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS intensity")
-		SHADER_PARAM(SSSPowerScale, SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS power scale")
-		SHADER_PARAM(Compress, SHADER_PARAM_TYPE_TEXTURE, "", "Compression wrinklemap")
-		SHADER_PARAM(BumpCompress, SHADER_PARAM_TYPE_TEXTURE, "", "Stretch bumpmap" )
-		SHADER_PARAM(Stretch, SHADER_PARAM_TYPE_TEXTURE, "", "Stretch wrinklemap")
-		SHADER_PARAM(BumpStretch, SHADER_PARAM_TYPE_TEXTURE, "", "Compression bumpmap" )
-		SHADER_PARAM(MRAOBias, SHADER_PARAM_TYPE_VEC4, "", "")
+		SHADER_PARAM(AlphaTestReference,		SHADER_PARAM_TYPE_FLOAT, "0", "")
+		SHADER_PARAM(EnvMap,					SHADER_PARAM_TYPE_ENVMAP, "", "Set the cubemap for this material.")
+		SHADER_PARAM(MRAOTexture,				SHADER_PARAM_TYPE_TEXTURE, "", "Texture with metalness in R, roughness in G, ambient occlusion in B.")
+		SHADER_PARAM(EmissionTexture,			SHADER_PARAM_TYPE_TEXTURE, "", "Emission texture")
+		SHADER_PARAM(NormalTexture,				SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture (deprecated, use $bumpmap)")
+		SHADER_PARAM(BumpMap,					SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture")
+		SHADER_PARAM(BumpFrame,					SHADER_PARAM_TYPE_INTEGER, "0", "Frame number for $bumpmap")
+		SHADER_PARAM(UseEnvAmbient,				SHADER_PARAM_TYPE_BOOL, "0", "Use the cubemaps to compute ambient light.")
+		SHADER_PARAM(SpecularTexture,			SHADER_PARAM_TYPE_TEXTURE, "", "Specular F0 RGB map")
+		SHADER_PARAM(LightWarpTexture,			SHADER_PARAM_TYPE_TEXTURE, "", "Lightwarp Texture" )
+		SHADER_PARAM(ThicknessTexture,			SHADER_PARAM_TYPE_TEXTURE, "", "Thickness map for SSS" )
+		SHADER_PARAM(Parallax,					SHADER_PARAM_TYPE_BOOL, "0", "Use Parallax Occlusion Mapping.")
+		SHADER_PARAM(ParallaxDepth,				SHADER_PARAM_TYPE_FLOAT, "0.0030", "Depth of the Parallax Map")
+		SHADER_PARAM(ParallaxCenter,			SHADER_PARAM_TYPE_FLOAT, "0.5", "Center depth of the Parallax Map")
+		SHADER_PARAM(EmissiveFactor,			SHADER_PARAM_TYPE_FLOAT, "1.0", "Emissive factor" )
+		SHADER_PARAM(SpecularFactor,			SHADER_PARAM_TYPE_FLOAT, "1.0", "Specular factor" )
+		SHADER_PARAM(SSSCOLOR,					SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Subsurface scattering color")
+		SHADER_PARAM(SSSIntensity,				SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS intensity")
+		SHADER_PARAM(SSSPowerScale,				SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS power scale")
+		SHADER_PARAM(Compress,					SHADER_PARAM_TYPE_TEXTURE, "", "Compression wrinklemap")
+		SHADER_PARAM(BumpCompress,				SHADER_PARAM_TYPE_TEXTURE, "", "Stretch bumpmap" )
+		SHADER_PARAM(Stretch,					SHADER_PARAM_TYPE_TEXTURE, "", "Stretch wrinklemap")
+		SHADER_PARAM(BumpStretch,				SHADER_PARAM_TYPE_TEXTURE, "", "Compression bumpmap" )
+		SHADER_PARAM(MRAOBias,					SHADER_PARAM_TYPE_VEC4, "", "")
+
+		SHADER_PARAM(DualLobe,					SHADER_PARAM_TYPE_BOOL, "", "")
+		SHADER_PARAM(DualLobe_RoughnessBias,	SHADER_PARAM_TYPE_FLOAT, "", "")
+		SHADER_PARAM(DualLobe_LerpFactor,		SHADER_PARAM_TYPE_FLOAT, "", "")
 	END_SHADER_PARAMS;
 
 	// Initializing parameters
@@ -142,6 +146,9 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 		// NUKE: This is a Color Param, it's default Value is 1 1 1 if you set it here or not
 		InitVecParam(SSSCOLOR, params, 1, 1, 1);
+
+		InitFloatParam(DualLobe_RoughnessBias, params, -0.2f);
+		InitFloatParam(DualLobe_LerpFactor, params, 0.5f);
 
 		// "Parallax and wrinkle are incompatible"
 		if (!mat_pbr_parallaxmap.GetBool() || params[Compress]->IsDefined())
@@ -229,6 +236,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		// Physically based workarounds
 		bool bUseEnvAmbient = params[UseEnvAmbient]->GetIntValue();
 #endif
+		bool bHasDualLobe = params[DualLobe]->GetIntValue() != 0;
 
 		// IsDefined() is not real on Shader Draw; This doesn't make any sense
 		bool bHasColor = true; // params[Color1]->IsDefined();
@@ -430,6 +438,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
 				SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
 				SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
+				SET_STATIC_PIXEL_SHADER_COMBO(DUALLOBE, bHasDualLobe);
 				SET_STATIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
 
 			}
@@ -445,6 +454,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 //				SET_STATIC_PIXEL_SHADER_COMBO(LightWarpTexture, 0); // bLightwarpTexture
 				SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
 				SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
+				SET_STATIC_PIXEL_SHADER_COMBO(DUALLOBE, bHasDualLobe);
 				SET_STATIC_PIXEL_SHADER(pbr_mrao_ps30);
 			}
 
@@ -599,6 +609,18 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			// FIXME: Model only State
 			LightState_t lightState;
 			pShaderAPI->GetDX9LightState(&lightState);
+
+			if (bHasDualLobe)
+			{
+				float cDualLobeControls[4] =
+				{
+					params[DualLobe_RoughnessBias]->GetFloatValue(),
+					clamp(params[DualLobe_LerpFactor]->GetFloatValue(), 0.0f, 1.0f),
+					0.0f,
+					0.0f
+				};
+				pShaderAPI->SetPixelShaderConstant(PSREG_SELFILLUM_SCALE_BIAS_EXP, cDualLobeControls);
+			}
 
 			// Brushes don't need ambient cubes or dynamic lights
 			if (!IS_FLAG_SET(MATERIAL_VAR_MODEL))
