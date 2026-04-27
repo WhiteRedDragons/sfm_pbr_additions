@@ -111,6 +111,8 @@ struct PS_INPUT
 	float3 Tangent					: TANGENT;
 	float3 Bitangent				: BINORMAL;
 	float3 Normal					: NORMAL;
+
+	float NoCullDirection			: VFACE;
 };
 
 // Source
@@ -183,14 +185,24 @@ float4 main(PS_INPUT i) : COLOR
 	f4BaseColor.rgb *= g_f3Tint;
 	
 	float3 f3NormalTS = f4NormalTS.xyz * 2.0f - 1.0f;
+	
+	// Fix Lighting when using NoCull caused by inverted Normals
+	f3NormalTS *= sign(i.NoCullDirection);
+
 	float3 f3NormalWS = normalize(mul(f3NormalTS, xmTBN));
+	#if WORLD_NORMAL
+		float fSSAODepth = i.LightmapTexCoord3.w;
+		return float4(f3NormalWS, fSSAODepth); // Does it want WS or TS? Original Code here used WS
+//	#else
+//		return float4(f3NormalWS * 0.5f + 0.5f, 1.0f);
+	#endif
 	
 	// Unused Alpha Channel
 	float4 f4MRAOTexture = tex2D(Sampler_MRAOTexture, f2TexCoord);
-	
+
 	// Biasing the Values instead of multiplying to give better Predictability
 	f4MRAOTexture.rgb = saturate(f4MRAOTexture.rgb + g_f3MRAOBias);
-	
+
 	float f1Metalness = f4MRAOTexture.x;
 	float f1Roughness = f4MRAOTexture.y;
 	float f1AmbientOcclusion = f4MRAOTexture.z;
@@ -394,11 +406,5 @@ float4 main(PS_INPUT i) : COLOR
 		#endif
 	#endif
 	
-	// This is also presumably !FLASHLIGHT
-	#if WORLD_NORMAL
-		float fSSAODepth = i.LightmapTexCoord3.w;
-		return float4(f3NormalWS, fSSAODepth); // Does it want WS or TS? Original Code here used WS
-	#else
-		return FinalOutput(float4(f3CombinedLighting, f1Alpha), f1FogFactor, PIXELFOGTYPE, TONEMAP_SCALE_LINEAR, bWriteDepthToAlpha, f3ProjPos.z);
-	#endif
+	return FinalOutput(float4(f3CombinedLighting, f1Alpha), f1FogFactor, PIXELFOGTYPE, TONEMAP_SCALE_LINEAR, bWriteDepthToAlpha, f3ProjPos.z);
 }
