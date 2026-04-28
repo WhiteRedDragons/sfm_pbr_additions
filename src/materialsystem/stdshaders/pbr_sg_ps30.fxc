@@ -43,5 +43,7 @@
 // SSS doesn't make sense on brushes or with parallax
 // SKIP: ( $SUBSURFACESCATTERING != 0 && $PARALLAXOCCLUSION != 0 )
 
+// This Shader has a Diffuse and Specular Texture
+#define SPECULARGLOSSINESS 1
 
 #include "pbr_main.h"

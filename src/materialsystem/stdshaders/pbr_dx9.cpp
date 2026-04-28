@@ -16,6 +16,8 @@
 #include "pbr_vs30.inc"
 #include "pbr_mrao_ps30.inc"
 #include "pbr_mrao_projtex_ps30.inc"
+#include "pbr_sg_ps30.inc"
+#include "pbr_sg_projtex_ps30.inc"
 
 #define SFM_BLACKBOX_MODE
 
@@ -63,17 +65,28 @@ static ConVar pbr_microshadows_globalstrength("pbr_microshadows_globalstrength",
 BEGIN_VS_SHADER(PBR, "PBR shader")
 
 	// Setting up vmt parameters
-	// FIXME: Capslocked Parameter Names are hard to read and this is only a thing because everyone copies the Code from Valve
 	BEGIN_SHADER_PARAMS;
+
+		// Metallic/Roughness
+		SHADER_PARAM(BaseColor,					SHADER_PARAM_TYPE_TEXTURE, "", "")
+		SHADER_PARAM(MRAOTexture,				SHADER_PARAM_TYPE_TEXTURE, "", "")
+
+		// Specular/Glossiness
+		SHADER_PARAM(Diffuse,					SHADER_PARAM_TYPE_TEXTURE, "", "")
+		SHADER_PARAM(Specular,					SHADER_PARAM_TYPE_TEXTURE, "", "")
+
+		// Will store the Value determined in Param Init on this Parameter
+		SHADER_PARAM(SpecularGlossiness,		SHADER_PARAM_TYPE_BOOL, "", "(Internal Parameter)")
+
+		// Proper Terminology
+		SHADER_PARAM(BumpMap,					SHADER_PARAM_TYPE_TEXTURE, "", "") // Required so we can receive Lighting
+		SHADER_PARAM(NormalMap,					SHADER_PARAM_TYPE_TEXTURE, "", "")
+
 		SHADER_PARAM(AlphaTestReference,		SHADER_PARAM_TYPE_FLOAT, "0", "")
 		SHADER_PARAM(EnvMap,					SHADER_PARAM_TYPE_ENVMAP, "", "Set the cubemap for this material.")
-		SHADER_PARAM(MRAOTexture,				SHADER_PARAM_TYPE_TEXTURE, "", "Texture with metalness in R, roughness in G, ambient occlusion in B.")
 		SHADER_PARAM(EmissionTexture,			SHADER_PARAM_TYPE_TEXTURE, "", "Emission texture")
-		SHADER_PARAM(NormalTexture,				SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture (deprecated, use $bumpmap)")
-		SHADER_PARAM(BumpMap,					SHADER_PARAM_TYPE_TEXTURE, "", "Normal texture")
 		SHADER_PARAM(BumpFrame,					SHADER_PARAM_TYPE_INTEGER, "0", "Frame number for $bumpmap")
 		SHADER_PARAM(UseEnvAmbient,				SHADER_PARAM_TYPE_BOOL, "0", "Use the cubemaps to compute ambient light.")
-		SHADER_PARAM(SpecularTexture,			SHADER_PARAM_TYPE_TEXTURE, "", "Specular F0 RGB map")
 		SHADER_PARAM(LightWarpTexture,			SHADER_PARAM_TYPE_TEXTURE, "", "Lightwarp Texture" )
 		SHADER_PARAM(ThicknessTexture,			SHADER_PARAM_TYPE_TEXTURE, "", "Thickness map for SSS" )
 		SHADER_PARAM(Parallax,					SHADER_PARAM_TYPE_BOOL, "0", "Use Parallax Occlusion Mapping.")
@@ -81,7 +94,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		SHADER_PARAM(ParallaxCenter,			SHADER_PARAM_TYPE_FLOAT, "0.5", "Center depth of the Parallax Map")
 		SHADER_PARAM(EmissiveFactor,			SHADER_PARAM_TYPE_FLOAT, "1.0", "Emissive factor" )
 		SHADER_PARAM(SpecularFactor,			SHADER_PARAM_TYPE_FLOAT, "1.0", "Specular factor" )
-		SHADER_PARAM(SSSCOLOR,					SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Subsurface scattering color")
+		SHADER_PARAM(SSSColor,					SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Subsurface scattering color")
 		SHADER_PARAM(SSSIntensity,				SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS intensity")
 		SHADER_PARAM(SSSPowerScale,				SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS power scale")
 		SHADER_PARAM(Compress,					SHADER_PARAM_TYPE_TEXTURE, "", "Compression wrinklemap")
@@ -98,21 +111,43 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 	// Initializing parameters
 	SHADER_INIT_PARAMS()
 	{
-		// Fallback for changed parameter
-		// NUKE: $NormalTexture, replace with $NormalMap
-		if (params[NormalTexture]->IsDefined())
-			params[BumpMap]->SetStringValue(params[NormalTexture]->GetStringValue());
+		// Whichever we are using, we need it on $BaseTexture in case other Parts of the Engine need it
+		// ( VRAD for Example that uses the $BaseTexture's Reflectiviy Value for bounced Lighting )
+		if(params[BaseColor]->IsDefined())
+		{
+			params[BaseTexture]->SetStringValue(params[BaseColor]->GetStringValue());
+		}
+		else if(params[Diffuse]->IsDefined())
+		{
+			params[BaseTexture]->SetStringValue(params[Diffuse]->GetStringValue());
+			params[SpecularGlossiness]->SetIntValue(1);
+		}
+		else if (params[BaseTexture]->IsDefined())
+		{
+			// Expect MetallicRoughness if there isn't anything more specific
+			params[BaseColor]->SetStringValue(params[BaseTexture]->GetStringValue());
+		}
 
-		// Dynamic lights need a bumpmap
-		// FIXME: Use Standard Flat Normal Map in Dynamic State, set this to "..." for Models
-		// Setting $BumpMap to something is required or WorldLight based Lighting doesn't work on Models correctly
-		if (!params[BumpMap]->IsDefined())
+		// In case there is no Diffuse/BaseTexture you might still have a $Specular Texture
+		if (params[Specular]->IsDefined())
+		{
+			params[SpecularGlossiness]->SetIntValue(1);
+		}
+
+		if(params[BumpMap]->IsDefined())
+		{
+			params[NormalMap]->SetStringValue(params[BumpMap]->GetStringValue());
+		}
+		else if(params[NormalMap]->IsDefined())
+		{
+			params[BumpMap]->SetStringValue(params[NormalMap]->GetStringValue());
+		}
+		else
+		{
+			// Need something on $BumpMap or we won't get Lighting on Static Props
+			// And instead of setting it to "..." I will set it to this so Texture Loads work correctly with $BumpFrame and Proxies
 			params[BumpMap]->SetStringValue("dev/flat_normal");
-
-		// Set a good default mrao texture
-		// FIXME: Use Standard White Texture with proper Bias Values
-		if (!params[MRAOTexture]->IsDefined())
-			params[MRAOTexture]->SetStringValue("dev/pbr_mraotexture");
+		}
 
 		// PBR relies heavily on envmaps
 		// NOTE: It was not considered that SFM Users use literally black Maps for Scene Building
@@ -145,7 +180,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		InitFloatParam(SSSPowerScale, params, 1.0f);
 
 		// NUKE: This is a Color Param, it's default Value is 1 1 1 if you set it here or not
-		InitVecParam(SSSCOLOR, params, 1, 1, 1);
+		InitVecParam(SSSColor, params, 1, 1, 1);
 
 		InitFloatParam(DualLobe_RoughnessBias, params, -0.2f);
 		InitFloatParam(DualLobe_LerpFactor, params, 0.5f);
@@ -154,6 +189,17 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		if (!mat_pbr_parallaxmap.GetBool() || params[Compress]->IsDefined())
 		{
 			params[Parallax]->SetIntValue(0);
+		}
+
+		// If no MRAO is defined && not using SpecularGlossiness
+		// Set some default MRAO Values by subtracting from the White Texture
+		if(!params[MRAOTexture]->IsDefined() && params[SpecularGlossiness]->GetIntValue() == 0)
+		{
+			InitVecParam(MRAOBias, params, -1.0f, -0.2f, 0.0f, 0.0f);
+		}
+		else if (!params[Specular]->IsDefined() && params[SpecularGlossiness]->GetIntValue() != 0)
+		{
+			InitVecParam(MRAOBias, params, -1.0f, 0.0f, 0.0f, 0.0f);
 		}
 	};
 
@@ -165,17 +211,22 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 	SHADER_INIT
 	{
-		// FIXME: Make dedicated $BaseColor and $NormalMap Parameters
+		// Load all the Texture
 		LoadTexture(BaseTexture, TEXTUREFLAGS_SRGB);
+		LoadTexture(BaseColor, TEXTUREFLAGS_SRGB);
+		LoadTexture(Diffuse, TEXTUREFLAGS_SRGB);
+
+		// Material Values
+		LoadTexture(MRAOTexture, NULL);
+		LoadTexture(Specular, NULL);
+
+		// Normal Maps
 		LoadBumpMap(BumpMap);
+		LoadBumpMap(NormalMap);
 
-		// FIXME2: Make dedicated $Diffuse Texture for "$SpecularTexture" which should be renamed to $Specular honestly
-		LoadTexture(MRAOTexture);
-		LoadTexture(SpecularTexture, TEXTUREFLAGS_SRGB);
-
-		int envMapFlags = g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE ? TEXTUREFLAGS_SRGB : 0;
-		envMapFlags |= TEXTUREFLAGS_ALL_MIPS;
-		LoadCubeMap(EnvMap, envMapFlags);
+		int nEnvMapFlags = g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE ? TEXTUREFLAGS_SRGB : 0;
+		nEnvMapFlags |= TEXTUREFLAGS_ALL_MIPS;
+		LoadCubeMap(EnvMap, nEnvMapFlags);
 
 		LoadTexture(EmissionTexture, TEXTUREFLAGS_SRGB);
 
@@ -223,18 +274,21 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		bool bHasFlashlight = UsingFlashlight(params); // FIXME: Outdated Variable Name
 		bool bIsAlphaTested = IS_FLAG_SET(MATERIAL_VAR_ALPHATEST) != 0; // FIXME: ( != 0) != 0 lol
 
-		// Setting up booleans
-		bool bHasBaseTexture = params[BaseTexture]->IsTexture();
-		bool bHasNormalTexture = params[BumpMap]->IsTexture();
-		bool bHasMraoTexture = params[MRAOTexture]->IsTexture();
-//		bool bHasSpecularTexture = !bHasMraoTexture && params[SpecularTexture]->IsTexture();
+		// Material Value Booleans
+		bool bSpecularGlossiness = params[SpecularGlossiness]->GetIntValue() != 0;
+		bool bHasBaseColor = !bSpecularGlossiness && params[BaseColor]->IsTexture();
+		bool bHasMRAOTexture = !bSpecularGlossiness && params[MRAOTexture]->IsTexture();
+		bool bHasDiffuse = bSpecularGlossiness && params[Diffuse]->IsTexture();
+		bool bHasSpecular = bSpecularGlossiness && params[Specular]->IsTexture();
+		bool bHasNormalMap = params[NormalMap]->IsTexture();
+
 		bool bHasEmissionTexture = params[EmissionTexture]->IsTexture();
 #ifndef SFM_BLACKBOX_MODE
 		bool bHasEnvMap = params[EnvMap]->IsTexture();
 
 		// NUKE: Non-sense or force. Why is there two of different ways of deriving Ambient
 		// Physically based workarounds
-		bool bUseEnvAmbient = params[UseEnvAmbient]->GetIntValue();
+//		bool bUseEnvAmbient = params[UseEnvAmbient]->GetIntValue();
 #endif
 		bool bHasDualLobe = params[DualLobe]->GetIntValue() != 0;
 
@@ -343,10 +397,20 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			//==========================================================================//
 
 			// s0, s1, s2
-			pShaderShadow->EnableTexture(SAMPLER_BASECOLOR, true);
-			pShaderShadow->EnableSRGBRead(SAMPLER_BASECOLOR, true);
-			pShaderShadow->EnableTexture(SAMPLER_MRAO, true);
-			pShaderShadow->EnableSRGBRead(SAMPLER_MRAO, false);
+			if(bSpecularGlossiness)
+			{
+				pShaderShadow->EnableTexture(SAMPLER_BASECOLOR, true);
+				pShaderShadow->EnableSRGBRead(SAMPLER_BASECOLOR, true);
+				pShaderShadow->EnableTexture(SAMPLER_MRAO, true);
+				pShaderShadow->EnableSRGBRead(SAMPLER_MRAO, false);
+			}
+			else
+			{
+				pShaderShadow->EnableTexture(SAMPLER_DIFFUSE, true);
+				pShaderShadow->EnableSRGBRead(SAMPLER_DIFFUSE, true);
+				pShaderShadow->EnableTexture(SAMPLER_SPECULAR, true);
+				pShaderShadow->EnableSRGBRead(SAMPLER_SPECULAR, false);			
+			}
 			pShaderShadow->EnableTexture(SAMPLER_NORMAL, true);
 			pShaderShadow->EnableSRGBRead(SAMPLER_NORMAL, false);
 
@@ -439,31 +503,53 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			if(bHasFlashlight)
 			{
 				// TODO: Check if the ATI Shadow Format Issue was fixed on SFM
-				DECLARE_STATIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
-				SET_STATIC_PIXEL_SHADER_COMBO(FLASHLIGHTDEPTHFILTERMODE, g_pHardwareConfig->GetShadowFilterMode());			
-//				SET_STATIC_PIXEL_SHADER_COMBO(SPECULAR, 0); // bHasSpecularTexture
-				SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
-				SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
-				SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
-				SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
-				SET_STATIC_PIXEL_SHADER_COMBO(DUALLOBE, bHasDualLobe);
-				SET_STATIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
-
+				if(bSpecularGlossiness)
+				{
+					DECLARE_STATIC_PIXEL_SHADER(pbr_sg_projtex_ps30);
+					SET_STATIC_PIXEL_SHADER_COMBO(FLASHLIGHTDEPTHFILTERMODE, g_pHardwareConfig->GetShadowFilterMode());
+					SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
+					SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
+					SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
+					SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
+					SET_STATIC_PIXEL_SHADER_COMBO(DUALLOBE, bHasDualLobe);
+					SET_STATIC_PIXEL_SHADER(pbr_sg_projtex_ps30);
+				}
+				else
+				{
+					DECLARE_STATIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
+					SET_STATIC_PIXEL_SHADER_COMBO(FLASHLIGHTDEPTHFILTERMODE, g_pHardwareConfig->GetShadowFilterMode());
+					SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
+					SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
+					SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
+					SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
+					SET_STATIC_PIXEL_SHADER_COMBO(DUALLOBE, bHasDualLobe);
+					SET_STATIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
+				}
 			}
 			else
 			{
-				DECLARE_STATIC_PIXEL_SHADER(pbr_mrao_ps30);
-//				SET_STATIC_PIXEL_SHADER_COMBO(LIGHTMAPPED, 0); // bLightMapped
-//				SET_STATIC_PIXEL_SHADER_COMBO(USEENVAMBIENT, bUseEnvAmbient); // SFM_BLACKBOX_MODE
-				SET_STATIC_PIXEL_SHADER_COMBO(EMISSIVE, bHasEmissionTexture); // FIXME: Make additively rendered pass to save on Samplers
-//				SET_STATIC_PIXEL_SHADER_COMBO(SPECULAR, 0); // bHasSpecularTexture
-				SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
-				SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
-//				SET_STATIC_PIXEL_SHADER_COMBO(LightWarpTexture, 0); // bLightwarpTexture
-				SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
-				SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
-				SET_STATIC_PIXEL_SHADER_COMBO(DUALLOBE, bHasDualLobe);
-				SET_STATIC_PIXEL_SHADER(pbr_mrao_ps30);
+				if (bSpecularGlossiness)
+				{
+					DECLARE_STATIC_PIXEL_SHADER(pbr_sg_ps30);
+					SET_STATIC_PIXEL_SHADER_COMBO(EMISSIVE, bHasEmissionTexture); // FIXME: Make additively rendered pass to save on Samplers
+					SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
+					SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
+					SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
+					SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
+					SET_STATIC_PIXEL_SHADER_COMBO(DUALLOBE, bHasDualLobe);
+					SET_STATIC_PIXEL_SHADER(pbr_sg_ps30);
+				}
+				else
+				{
+					DECLARE_STATIC_PIXEL_SHADER(pbr_mrao_ps30);
+					SET_STATIC_PIXEL_SHADER_COMBO(EMISSIVE, bHasEmissionTexture); // FIXME: Make additively rendered pass to save on Samplers
+					SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
+					SET_STATIC_PIXEL_SHADER_COMBO(WORLD_NORMAL, bWorldNormal);
+					SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAP, bWrinkleMapping);
+					SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
+					SET_STATIC_PIXEL_SHADER_COMBO(DUALLOBE, bHasDualLobe);
+					SET_STATIC_PIXEL_SHADER(pbr_mrao_ps30);
+				}
 			}
 
 			//==========================================================================//
@@ -504,14 +590,29 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 			bool bLightingOnly = mat_fullbright.GetInt() == 2 && !IS_FLAG_SET(MATERIAL_VAR_NO_DEBUG_OVERRIDE);
 
-			// Setting up albedo texture
-			if (!bLightingOnly && bHasBaseTexture)
+			if(bSpecularGlossiness)
 			{
-				BindTexture(SAMPLER_BASECOLOR, BaseTexture, Frame);
+				// Setting up albedo texture
+				if (!bLightingOnly && bHasDiffuse)
+				{
+					BindTexture(SAMPLER_DIFFUSE, Diffuse, Frame);
+				}
+				else
+				{
+					pShaderAPI->BindStandardTexture(SAMPLER_DIFFUSE, TEXTURE_GREY);
+				}
 			}
 			else
 			{
-				pShaderAPI->BindStandardTexture(SAMPLER_BASECOLOR, TEXTURE_GREY);
+				// Setting up albedo texture
+				if (!bLightingOnly && bHasBaseColor)
+				{
+					BindTexture(SAMPLER_BASECOLOR, BaseColor, Frame);
+				}
+				else
+				{
+					pShaderAPI->BindStandardTexture(SAMPLER_BASECOLOR, TEXTURE_GREY);
+				}
 			}
 
 			// Setting up environment map
@@ -536,35 +637,37 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 			// Setting up normal map
 			// NOTE: A default Normal Map is defined in Param Init, but there is still a Fallback here
-			if (bHasNormalTexture)
+			if (bHasNormalMap)
 			{
-				BindTexture(SAMPLER_NORMAL, BumpMap, BumpFrame);
+				BindTexture(SAMPLER_NORMAL, NormalMap, BumpFrame);
 			}
 			else
 			{
 				pShaderAPI->BindStandardTexture(SAMPLER_NORMAL, TEXTURE_NORMALMAP_FLAT);
 			}
 
-			// Setting up mrao map
-			if (bHasMraoTexture)
+			if (bSpecularGlossiness)
 			{
-				BindTexture(SAMPLER_MRAO, MRAOTexture, 0); // FIXME: Missing Frame Parameter
+				if (bHasSpecular)
+				{
+					BindTexture(SAMPLER_SPECULAR, Specular, 0); // FIXME: Missing Frame Parameter
+				}
+				else
+				{
+					pShaderAPI->BindStandardTexture(SAMPLER_SPECULAR, TEXTURE_GREY_ALPHA_ZERO);
+				}
 			}
 			else
 			{
-				pShaderAPI->BindStandardTexture(SAMPLER_MRAO, TEXTURE_WHITE);
+				if (bHasMRAOTexture)
+				{
+					BindTexture(SAMPLER_MRAO, MRAOTexture, 0); // FIXME: Missing Frame Parameter
+				}
+				else
+				{
+					pShaderAPI->BindStandardTexture(SAMPLER_MRAO, TEXTURE_WHITE);
+				}
 			}
-
-			/*
-			if (bHasSpecularTexture)
-			{
-				BindTexture(SAMPLER_SPECULAR, SpecularTexture, 0); // FIXME: Missing Frame Parameter
-			}
-			else
-			{
-				pShaderAPI->BindStandardTexture(SAMPLER_SPECULAR, TEXTURE_BLACK);
-			}
-			*/
 
 			if (bThicknessTexture)
 			{
@@ -728,7 +831,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			pShaderAPI->SetPixelShaderConstant(PSREG_PBR_EXTRA_FACTORS, vExtraFactors, 1);
 
 			float vSSSColor[4] = { 0, 0, 0, 0 };
-			params[SSSCOLOR]->GetVecValue(vSSSColor, 3);
+			params[SSSColor]->GetVecValue(vSSSColor, 3);
 			pShaderAPI->SetPixelShaderConstant(PSREG_PBR_SSS_COLOR, vSSSColor, 1);
 
 			// Need this for sampling SSAO
@@ -829,20 +932,43 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			// FIXME: Optimize Dynamic Combos. This is long compiletimes for no Reason
 			if (bHasFlashlight)
 			{
-				DECLARE_DYNAMIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, bFlashlightShadows);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(UBERLIGHT, flashlightState.m_bUberlight);
-				SET_DYNAMIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
+				if (bSpecularGlossiness)
+				{
+					DECLARE_DYNAMIC_PIXEL_SHADER(pbr_sg_projtex_ps30);
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, bFlashlightShadows);
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(UBERLIGHT, flashlightState.m_bUberlight);
+					SET_DYNAMIC_PIXEL_SHADER(pbr_sg_projtex_ps30);
+				}
+				else
+				{
+					DECLARE_DYNAMIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, bFlashlightShadows);
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(UBERLIGHT, flashlightState.m_bUberlight);
+					SET_DYNAMIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
+				}
 			}
 			else
 			{
-				DECLARE_DYNAMIC_PIXEL_SHADER(pbr_mrao_ps30);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_LIGHTS, lightState.m_nNumLights);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITEWATERFOGTODESTALPHA, bWriteWaterFogToAlpha);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
-				SET_DYNAMIC_PIXEL_SHADER(pbr_mrao_ps30);
+				if (bSpecularGlossiness)
+				{
+					DECLARE_DYNAMIC_PIXEL_SHADER(pbr_sg_ps30);
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_LIGHTS, lightState.m_nNumLights);
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITEWATERFOGTODESTALPHA, bWriteWaterFogToAlpha);
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha);
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
+					SET_DYNAMIC_PIXEL_SHADER(pbr_sg_ps30);
+				}
+				else
+				{
+					DECLARE_DYNAMIC_PIXEL_SHADER(pbr_mrao_ps30);
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_LIGHTS, lightState.m_nNumLights);
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITEWATERFOGTODESTALPHA, bWriteWaterFogToAlpha);
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha);
+					SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
+					SET_DYNAMIC_PIXEL_SHADER(pbr_mrao_ps30);
+				}
 			}
 		}
 
@@ -850,6 +976,4 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 	   // TODO: DepthToDestAlpha for Alphatested Materials?
 	};
-
-// Closing it off
-END_SHADER;
+END_SHADER

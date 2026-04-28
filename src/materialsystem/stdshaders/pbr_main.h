@@ -76,8 +76,13 @@ const float4 cSSSColor				: register(PSREG_PBR_SSS_COLOR); // Subsurface scatter
 // Samplers
 //==================================================================================================
 
-sampler Sampler_BaseTexture			: register(s0);
-sampler Sampler_MRAOTexture			: register(s1);
+#if SPECULARGLOSSINESS
+	sampler Sampler_Diffuse				: register(s0);
+	sampler Sampler_Specular			: register(s1);
+#else
+	sampler Sampler_BaseColor			: register(s0);
+	sampler Sampler_MRAOTexture			: register(s1);
+#endif
 sampler Sampler_NormalTexture		: register(s2);
 #if WRINKLEMAP
 	sampler Sampler_Compress		: register(s3);
@@ -160,7 +165,13 @@ float4 main(PS_INPUT i) : COLOR
 		float2 f2TexCoord = i.TexCoord;
 	#endif
 	
-	float4 f4BaseColor = tex2D(Sampler_BaseTexture, f2TexCoord);
+	float4 f4BaseTexture;
+	#if SPECULARGLOSSINESS
+		f4BaseTexture = tex2D(Sampler_Diffuse, f2TexCoord);
+	#else
+		f4BaseTexture = tex2D(Sampler_BaseColor, f2TexCoord);
+	#endif
+
 	float4 f4NormalTS = tex2D(Sampler_NormalTexture, f2TexCoord);
 	
 	float f1WrinkleAmount, f1StretchAmount, f1TextureAmount;
@@ -176,7 +187,7 @@ float4 main(PS_INPUT i) : COLOR
 		float3 f3StretchColor = tex2D(Sampler_Stretch, f2TexCoord).rgb;
 	
 		// Apply only to RGB for consistency with the Normal Map ( also makes the Results more predictable )
-		f4BaseColor.rgb = f1TextureAmount * f4BaseColor.rgb
+		f4BaseTexture.rgb = f1TextureAmount * f4BaseTexture.rgb
 						+ f1WrinkleAmount * f3WrinkleColor
 						+ f1StretchAmount * f3StretchColor;
 	
@@ -189,7 +200,7 @@ float4 main(PS_INPUT i) : COLOR
 					   + f1StretchAmount * f3StretchNormalTS;
 	#endif
 	
-	f4BaseColor.rgb *= g_f3Tint;
+	f4BaseTexture.rgb *= g_f3Tint;
 	
 	float3 f3NormalTS = f4NormalTS.xyz * 2.0f - 1.0f;
 	
@@ -204,15 +215,36 @@ float4 main(PS_INPUT i) : COLOR
 //		return float4(f3NormalWS * 0.5f + 0.5f, 1.0f);
 	#endif
 	
-	// Unused Alpha Channel
-	float4 f4MRAOTexture = tex2D(Sampler_MRAOTexture, f2TexCoord);
+	#if SPECULARGLOSSINESS
+		float4 f4SpecularTexture = tex2D(Sampler_Specular, f2TexCoord);
 
-	// Biasing the Values instead of multiplying to give better Predictability
-	f4MRAOTexture.rgb = saturate(f4MRAOTexture.rgb + g_f3MRAOBias);
+		float3 f3DiffuseColor = f4BaseTexture.rgb;		// Diffuse
+		float3 f3SpecularColor = f4SpecularTexture.rgb;	// Specular
 
-	float f1Metalness = f4MRAOTexture.x;
-	float f1Roughness = f4MRAOTexture.y;
-	float f1AmbientOcclusion = f4MRAOTexture.z;
+		float f1Roughness = 1.0f - f4SpecularTexture.a;	// Glossiness
+
+		// Need to take the Ambient Occlusion from somewhere
+		// BaseTexture Alpha it is!
+		float f1AmbientOcclusion = f4BaseTexture.a;
+
+		// We can still apply MRAOBias this way
+		f3SpecularColor		= saturate(g_f3MRAOBias.r + f3SpecularColor);
+		f1Roughness			= saturate(g_f3MRAOBias.g + f1Roughness);
+		f1AmbientOcclusion	= saturate(g_f3MRAOBias.b + f1AmbientOcclusion);
+	#else
+		// Unused Alpha Channel
+		float4 f4MRAOTexture = tex2D(Sampler_MRAOTexture, f2TexCoord);
+
+		// Biasing the Values instead of multiplying to give better Predictability
+		f4MRAOTexture.rgb = saturate(f4MRAOTexture.rgb + g_f3MRAOBias);
+
+		float f1Metalness = f4MRAOTexture.r;
+		float3 f3DiffuseColor = (1.0f - f1Metalness) * f4BaseTexture.rgb;
+		float3 f3SpecularColor = lerp(0.04f, f4BaseTexture.rgb, f1Metalness);
+
+		float f1Roughness = f4MRAOTexture.g;
+		float f1AmbientOcclusion = f4MRAOTexture.b;
+	#endif
 
 	#if DUALLOBE
 		float f1SecondaryRoughness = saturate(f1Roughness + g_f1DualLobe_RoughnessBias);
@@ -221,11 +253,6 @@ float4 main(PS_INPUT i) : COLOR
 	// TODO: This is needed at the end, make it easier for the Compiler to optimize it by putting it well, at the end where it's used
 	#if EMISSIVE
 		float3 f3Emission = tex2D(Sampler_EmissionTexture, f2TexCoord).xyz * g_f1EmissiveFactor;
-	#endif
-
-	// This is the place where you would expect a massive "else" Statement
-	#if SPECULAR
-		float4 f4Specular = saturate(tex2D(Sampler_SpecularTexture, f2TexCoord).xyz * g_f1SpecularFactor);
 	#endif
 
 	#if SUBSURFACESCATTERING
@@ -249,15 +276,6 @@ float4 main(PS_INPUT i) : COLOR
 	// This is fine but why tf, do we not use A. The Stock Function for doing this B. the intrinsic reflect() Function
 	float3 f3Reflect = 2.0 * f1NdotV * f3NormalWS - f3ViewDir;
 	
-	// Decompress BaseColor
-	#if SPECULAR
-		float3 f3DiffuseColor = f4BaseColor.rgb; // FIXME: Naming
-		float3 f3SpecularColor = f4Specular.rgb;
-	#else
-		float3 f3DiffuseColor = (1.0f - f1Metalness) * f4BaseColor.rgb;
-		float3 f3SpecularColor = lerp(0.04f, f4BaseColor.rgb, f1Metalness);
-	#endif
-
 	//==================================================================================================
 	// Indirect Lighting
 	//==================================================================================================
@@ -280,7 +298,7 @@ float4 main(PS_INPUT i) : COLOR
 		#if SPECULAR
 			float3 f3DiffuseContributionFactor = 1.0f - f3AmbientLightingFresnelTerm;
 		#else
-			float3 f3DiffuseContributionFactor = lerp(1.0f - f3AmbientLightingFresnelTerm, 0.0f, f1Metalness);;
+			float3 f3DiffuseContributionFactor = lerp(1.0f - f3AmbientLightingFresnelTerm, 0.0f, f3SpecularColor);;
 		#endif
 			f3DiffuseLighting = f3DiffuseContributionFactor * f3DiffuseColor * f3DiffuseLighting; // To Pi or not to PI mhmhmmh
 
@@ -330,11 +348,11 @@ float4 main(PS_INPUT i) : COLOR
 			// Diffuse and Specular
 
 			float3 f3DirectAndSpecular = calculateLight(f3LightDir, f3LightColor, f3ViewDir,
-				f3NormalWS, f3SpecularColor, f1Roughness, f1Metalness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp);
+				f3NormalWS, f3SpecularColor, f1Roughness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp);
 
 			#if DUALLOBE
 				float3 f3SecondaryDirectAndSpecular = calculateLight(f3LightDir, f3LightColor, f3ViewDir,
-					f3NormalWS, f3SpecularColor, f1SecondaryRoughness, f1Metalness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp);
+					f3NormalWS, f3SpecularColor, f1SecondaryRoughness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp);
 			
 				f3DirectLighting += lerp(f3DirectAndSpecular, f3SecondaryDirectAndSpecular, g_f1DualLobe_LerpFactor);
 			#else
@@ -399,11 +417,11 @@ float4 main(PS_INPUT i) : COLOR
 	
 		// FIXME: The max(0, ) here implies a SERIOUS mathematical Problem
 		float3 f3DirectAndSpecular = max(0, calculateLight(flashLightIn, flashLightIntensity, f3ViewDir,
-			f3NormalWS, f3SpecularColor, f1Roughness, f1Metalness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp));
+			f3NormalWS, f3SpecularColor, f1Roughness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp));
 
 		#if DUALLOBE
 			float3 f3SecondaryDirectAndSpecular = max(0, calculateLight(flashLightIn, flashLightIntensity, f3ViewDir,
-				f3NormalWS, f3SpecularColor, f1SecondaryRoughness, f1Metalness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp));
+				f3NormalWS, f3SpecularColor, f1SecondaryRoughness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp));
 		
 			f3DirectLighting += lerp(f3DirectAndSpecular, f3SecondaryDirectAndSpecular, g_f1DualLobe_LerpFactor);
 		#else
@@ -432,7 +450,7 @@ float4 main(PS_INPUT i) : COLOR
 	float f1FogFactor = CalcPixelFogFactor(PIXELFOGTYPE, cFogParams, g_f3CameraPos, f3WorldPos.xyz, f3ProjPos.z);
 	
 	// This is alos !FLASHLIGHT but no one ever noticed
-	float f1Alpha = f4BaseColor.a;
+	float f1Alpha = f4BaseTexture.a;
 	#if !FLASHLIGHT
 		#if (WRITEWATERFOGTODESTALPHA && (PIXELFOGTYPE == PIXEL_FOG_TYPE_HEIGHT))
 			f1Alpha = f1FogFactor;

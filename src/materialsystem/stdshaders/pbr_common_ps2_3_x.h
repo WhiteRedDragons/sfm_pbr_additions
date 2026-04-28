@@ -94,7 +94,7 @@ float GetAttenForLight(float4 lightAtten, int lightNum)
 }
 
 // Calculate direct light for one source
-float3 calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, float3 normal, float3 fresnelReflectance, float roughness, float metalness, float lightDirectionAngle, float3 albedo, in sampler lightWarpSampler)
+float3 calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, float3 normal, float3 f3SpecularColor, float roughness, float lightDirectionAngle, float3 f3Diffuse, in sampler lightWarpSampler)
 {
     // Lh
     float3 HalfAngle = normalize(lightIn + lightOut); 
@@ -103,7 +103,7 @@ float3 calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, fl
     float cosHalfAngle = max(0.0, dot(normal, HalfAngle));
 
     // F - Calculate Fresnel term for direct lighting
-    float3 F = fresnelSchlick(fresnelReflectance, max(0.0, dot(HalfAngle, lightOut)));
+    float3 F = fresnelSchlick(f3SpecularColor, max(0.0, dot(HalfAngle, lightOut)));
 
     // D - Calculate normal distribution for specular BRDF
     float D = ndfGGX(cosHalfAngle, roughness);
@@ -114,14 +114,8 @@ float3 calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, fl
     // Diffuse scattering happens due to light being refracted multiple times by a dielectric medium
     // Metals on the other hand either reflect or absorb energso diffuse contribution is always, zero
     // To be energy conserving we must scale diffuse BRDF contribution based on Fresnel factor & metalness
-#if SPECULAR
-    // Metalness is not used if F0 map is available
     float3 kd = float3(1, 1, 1) - F;
-#else
-    float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metalness);
-#endif
-
-    float3 diffuseBRDF = kd * albedo;
+    float3 diffuseBRDF = f3Diffuse * kd;
 
     // Cook-Torrance specular microfacet BRDF
     float3 specularBRDF = (F * D * G) / max(EPSILON, 4.0 * cosLightIn * lightDirectionAngle);
