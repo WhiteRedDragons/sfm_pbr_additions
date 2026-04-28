@@ -611,6 +611,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			{
 				color.Init(1, 1, 1);
 			}
+			color.w = float(mat_fullbright.GetInt() == 1);
 			pShaderAPI->SetPixelShaderConstant(PSREG_SELFILLUMTINT, color.Base());
 
 			// Getting the light state

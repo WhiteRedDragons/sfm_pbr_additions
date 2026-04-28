@@ -11,6 +11,7 @@
 // FIXME: Register Macros dedicated to this Shader. Stop copy pasting Stock Shader Slop 
 const float4 cBaseColor								: register(PSREG_SELFILLUMTINT);
 #define g_f3Tint (cBaseColor.rgb)
+#define g_f1Fullbright (cBaseColor.w)
 
 const float4 cDiffuseModulation						: register(PSREG_DIFFUSE_MODULATION);
 
@@ -419,6 +420,13 @@ float4 main(PS_INPUT i) : COLOR
 	#endif
 	
 	float3 f3CombinedLighting = f3DirectLighting + f3IndirectLighting;
+
+	// When Lighting is disabled the Ambient Cube is fullbright'ed
+	// Since I disabled all the Indirect Lighting Code we need to account for it differently.
+	// This will essentially do the same Thing:
+	#if (SFM_BLACKBOX_MODE && !FLASHLIGHT)
+		f3CombinedLighting += f3DiffuseColor * g_f1Fullbright;
+	#endif
 
 	// This is not !FLASHLIGHT. Projected Textures disappear into Fog
 	float f1FogFactor = CalcPixelFogFactor(PIXELFOGTYPE, cFogParams, g_f3CameraPos, f3WorldPos.xyz, f3ProjPos.z);
