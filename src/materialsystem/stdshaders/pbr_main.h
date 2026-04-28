@@ -443,7 +443,7 @@ float4 main(PS_INPUT i) : COLOR
 	// Since I disabled all the Indirect Lighting Code we need to account for it differently.
 	// This will essentially do the same Thing:
 	#if (SFM_BLACKBOX_MODE && !FLASHLIGHT)
-		f3CombinedLighting += f3DiffuseColor * g_f1Fullbright;
+		f3CombinedLighting += f3DiffuseColor * f1AmbientOcclusion * g_f1Fullbright;
 	#endif
 
 	// This is not !FLASHLIGHT. Projected Textures disappear into Fog
