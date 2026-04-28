@@ -409,7 +409,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				pShaderShadow->EnableTexture(SAMPLER_DIFFUSE, true);
 				pShaderShadow->EnableSRGBRead(SAMPLER_DIFFUSE, true);
 				pShaderShadow->EnableTexture(SAMPLER_SPECULAR, true);
-				pShaderShadow->EnableSRGBRead(SAMPLER_SPECULAR, false);			
+				pShaderShadow->EnableSRGBRead(SAMPLER_SPECULAR, true);			
 			}
 			pShaderShadow->EnableTexture(SAMPLER_NORMAL, true);
 			pShaderShadow->EnableSRGBRead(SAMPLER_NORMAL, false);
