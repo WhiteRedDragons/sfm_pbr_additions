@@ -81,6 +81,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		// Proper Terminology
 		SHADER_PARAM(BumpMap,					SHADER_PARAM_TYPE_TEXTURE, "", "") // Required so we can receive Lighting
 		SHADER_PARAM(NormalMap,					SHADER_PARAM_TYPE_TEXTURE, "", "")
+		SHADER_PARAM(NormalMapFactor,			SHADER_PARAM_TYPE_FLOAT, "", "")
 
 		SHADER_PARAM(AlphaTestReference,		SHADER_PARAM_TYPE_FLOAT, "0", "")
 		SHADER_PARAM(EnvMap,					SHADER_PARAM_TYPE_ENVMAP, "", "Set the cubemap for this material.")
@@ -106,6 +107,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		SHADER_PARAM(DualLobe,					SHADER_PARAM_TYPE_BOOL, "", "")
 		SHADER_PARAM(DualLobe_RoughnessBias,	SHADER_PARAM_TYPE_FLOAT, "", "")
 		SHADER_PARAM(DualLobe_LerpFactor,		SHADER_PARAM_TYPE_FLOAT, "", "")
+
 	END_SHADER_PARAMS;
 
 	// Initializing parameters
@@ -172,6 +174,8 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 		// NUKE: Default Value is 0 even if you don't set it
 		InitIntParam(BumpFrame, params, 0);
+
+		InitFloatParam(NormalMapFactor, params, 1.0f);
 
 		// FIXME: Bracket Spacing
 		InitFloatParam(EmissiveFactor, params, 1.0f);
@@ -721,6 +725,15 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			// FIXME: Model only State
 			LightState_t lightState;
 			pShaderAPI->GetDX9LightState(&lightState);
+
+			float cVariousControls2[4] =
+			{
+				clamp(params[NormalMapFactor]->GetFloatValue(), 0.0f, 1.0f),
+				0.0f,
+				0.0f,
+				0.0f
+			};
+			pShaderAPI->SetPixelShaderConstant(PSREG_SHADER_CONTROLS_2, cVariousControls2);
 
 			if (bHasDualLobe)
 			{
