@@ -403,17 +403,17 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			// s0, s1, s2
 			if(bSpecularGlossiness)
 			{
+				pShaderShadow->EnableTexture(SAMPLER_DIFFUSE, true);
+				pShaderShadow->EnableSRGBRead(SAMPLER_DIFFUSE, true);
+				pShaderShadow->EnableTexture(SAMPLER_SPECULAR, true);
+				pShaderShadow->EnableSRGBRead(SAMPLER_SPECULAR, true);
+			}
+			else
+			{
 				pShaderShadow->EnableTexture(SAMPLER_BASECOLOR, true);
 				pShaderShadow->EnableSRGBRead(SAMPLER_BASECOLOR, true);
 				pShaderShadow->EnableTexture(SAMPLER_MRAO, true);
 				pShaderShadow->EnableSRGBRead(SAMPLER_MRAO, false);
-			}
-			else
-			{
-				pShaderShadow->EnableTexture(SAMPLER_DIFFUSE, true);
-				pShaderShadow->EnableSRGBRead(SAMPLER_DIFFUSE, true);
-				pShaderShadow->EnableTexture(SAMPLER_SPECULAR, true);
-				pShaderShadow->EnableSRGBRead(SAMPLER_SPECULAR, true);			
 			}
 			pShaderShadow->EnableTexture(SAMPLER_NORMAL, true);
 			pShaderShadow->EnableSRGBRead(SAMPLER_NORMAL, false);
