@@ -179,7 +179,7 @@ void CBaseShader::SetInitialShadowState( )
 	s_pShaderShadow->SetDefaultState();
 
 	// Init the standard states...
-	int flags = s_ppParams[FLAGS]->GetIntValue();
+	int flags = s_ppParams[Flags]->GetIntValue();
 	if (flags & MATERIAL_VAR_IGNOREZ)
 	{
 		s_pShaderShadow->EnableDepthTest( false );
@@ -228,7 +228,7 @@ void CBaseShader::Draw( bool bMakeActualDrawCall )
 	{
 		// Turn off transparency if we're asked to....
 		if (g_pConfig->bNoTransparency && 
-			((s_ppParams[FLAGS]->GetIntValue() & MATERIAL_VAR_NO_DEBUG_OVERRIDE) == 0))
+			((s_ppParams[Flags]->GetIntValue() & MATERIAL_VAR_NO_DEBUG_OVERRIDE) == 0))
 		{
 			s_pShaderShadow->EnableDepthWrites( true );
  			s_pShaderShadow->EnableBlending( false );
@@ -733,7 +733,7 @@ void CBaseShader::ApplyColor2Factor( float *pColorOut ) const // (*pColorOut) *=
 		return;
 	}
 
-	IMaterialVar* pColor2Var = s_ppParams[COLOR2];
+	IMaterialVar* pColor2Var = s_ppParams[Color2];
 	if ( pColor2Var->GetType() == MATERIAL_VAR_TYPE_VECTOR )
 	{
 		float flColor2[3];
@@ -745,7 +745,7 @@ void CBaseShader::ApplyColor2Factor( float *pColorOut ) const // (*pColorOut) *=
 	}
 	if ( g_pHardwareConfig->UsesSRGBCorrectBlending() )
 	{
-		IMaterialVar* pSRGBVar = s_ppParams[SRGBTINT];
+		IMaterialVar* pSRGBVar = s_ppParams[sRGBTint];
 		if (pSRGBVar->GetType() == MATERIAL_VAR_TYPE_VECTOR)
 		{
 			float flSRGB[3];
