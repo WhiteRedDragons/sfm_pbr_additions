@@ -60,11 +60,6 @@ const float4 cAABB						: register(PSREG_UBERLIGHT_AABB);
 const float4x4 xmFlashlightWorldToLight : register(PSREG_UBERLIGHT_WORLD_TO_LIGHT);
 #endif
 
-// Instead of filling the empty registers at the bottom these are just way above the Rest
-const float4 cMRAOControls			: register(PSREG_PBR_MRAO_FACTORS); // Metalness, roughness, AO, SSAO factor
-#define g_f3MRAOBias (cMRAOControls.xyz)
-#define g_f1MicroShadowFactor (cMRAOControls.w)
-
 const float4 cVariousControls		: register(PSREG_PBR_EXTRA_FACTORS); // Emissive, specular factor, SSS intensity, SSS power scale
 #define g_f1EmissiveFactor (cVariousControls.x)
 #define g_f1SpecularFactor (cVariousControls.y)
@@ -73,6 +68,16 @@ const float4 cVariousControls		: register(PSREG_PBR_EXTRA_FACTORS); // Emissive,
 
 const float4 cSSSColor				: register(PSREG_PBR_SSS_COLOR); // Subsurface scattering color
 #define g_f3SSSColor (cSSSColor.rgb)
+
+const float4 cMRAOMultiplier : register(PSREG_PBR_MRAOMULTIPLIER);
+#define g_f3MRAOMultiplier (cMRAOMultiplier.xyz)
+
+const float4 cMRAOBias : register(PSREG_PBR_MRAOBIAS);
+#define g_f3MRAOBias (cMRAOBias.xyz)
+#define g_f1MicroShadowFactor (cMRAOBias.w)
+
+const float4 cMRAOExponent : register(PSREG_PBR_MRAOEXPONENT);
+#define g_f3MRAOExponent (cMRAOExponent.xyz)
 
 //==================================================================================================
 // Samplers
@@ -233,15 +238,16 @@ float4 main(PS_INPUT i) : COLOR
 		float f1AmbientOcclusion = f4BaseTexture.a;
 
 		// We can still apply MRAOBias this way
-		f3SpecularColor		= saturate(g_f3MRAOBias.r + f3SpecularColor);
-		f1Roughness			= saturate(g_f3MRAOBias.g + f1Roughness);
-		f1AmbientOcclusion	= saturate(g_f3MRAOBias.b + f1AmbientOcclusion);
+		// The whole shebang, nothing else I can do
+		f3SpecularColor		= saturate(g_f3MRAOMultiplier.r * pow(max(f3SpecularColor, 0.0f),		g_f3MRAOExponent.r) + g_f3MRAOBias.r);
+		f1Roughness			= saturate(g_f3MRAOMultiplier.g * pow(max(f1Roughness, 0.0f),			g_f3MRAOExponent.g) + g_f3MRAOBias.b);
+		f1AmbientOcclusion	= saturate(g_f3MRAOMultiplier.b * pow(max(f1AmbientOcclusion, 0.0f),	g_f3MRAOExponent.b) + g_f3MRAOBias.b);
 	#else
 		// Unused Alpha Channel
 		float4 f4MRAOTexture = tex2D(Sampler_MRAOTexture, f2TexCoord);
 
-		// Biasing the Values instead of multiplying to give better Predictability
-		f4MRAOTexture.rgb = saturate(f4MRAOTexture.rgb + g_f3MRAOBias);
+		// The whole shebang, nothing else I can do
+		f4MRAOTexture.rgb = saturate(g_f3MRAOMultiplier * pow(max(f4MRAOTexture.rgb, 0.0f), g_f3MRAOExponent) + g_f3MRAOBias);
 
 		float f1Metalness = f4MRAOTexture.r;
 		float3 f3DiffuseColor = (1.0f - f1Metalness) * f4BaseTexture.rgb;

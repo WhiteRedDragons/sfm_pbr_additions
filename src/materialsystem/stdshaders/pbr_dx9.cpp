@@ -102,7 +102,11 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		SHADER_PARAM(BumpCompress,				SHADER_PARAM_TYPE_TEXTURE, "", "Stretch bumpmap" )
 		SHADER_PARAM(Stretch,					SHADER_PARAM_TYPE_TEXTURE, "", "Stretch wrinklemap")
 		SHADER_PARAM(BumpStretch,				SHADER_PARAM_TYPE_TEXTURE, "", "Compression bumpmap" )
-		SHADER_PARAM(MRAOBias,					SHADER_PARAM_TYPE_VEC4, "", "")
+
+		SHADER_PARAM(MRAOMultiplier,			SHADER_PARAM_TYPE_VEC3, "", "")
+		SHADER_PARAM(MRAOBias,					SHADER_PARAM_TYPE_VEC3, "", "")
+		SHADER_PARAM(MRAOExponent,				SHADER_PARAM_TYPE_VEC3, "", "")
+		SHADER_PARAM(MicroShadowBias,			SHADER_PARAM_TYPE_FLOAT, "", "")
 
 		SHADER_PARAM(DualLobe,					SHADER_PARAM_TYPE_BOOL, "", "")
 		SHADER_PARAM(DualLobe_RoughnessBias,	SHADER_PARAM_TYPE_FLOAT, "", "")
@@ -195,6 +199,10 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			params[Parallax]->SetIntValue(0);
 		}
 
+		InitVecParam(MRAOMultiplier, params, 1.0f, 1.0f, 1.0f);
+		InitVecParam(MRAOExponent, params, 1.0f, 1.0f, 1.0f);
+		InitFloatParam(MicroShadowBias, params, 0.0f);
+
 		// If no MRAO is defined && not using SpecularGlossiness
 		// Set some default MRAO Values by subtracting from the White Texture
 		if(!params[MRAOTexture]->IsDefined() && params[SpecularGlossiness]->GetIntValue() == 0)
@@ -204,6 +212,10 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		else if (!params[Specular]->IsDefined() && params[SpecularGlossiness]->GetIntValue() != 0)
 		{
 			InitVecParam(MRAOBias, params, -1.0f, 0.0f, 0.0f, 0.0f);
+		}
+		else
+		{
+			InitVecParam(MRAOBias, params, 0.0f, 0.0f, 0.0f);
 		}
 	};
 
@@ -825,13 +837,22 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			if (bHasFlashlight)
 				flSSAOStrength *= flashlightState.m_flAmbientOcclusion;
 
-			// FIXME: Use Bias Values because multiplication does not f'n work with 0.0 and makes anything hard to pinpoint to an exact Value
-			// FIXME: Single Parameter not 4
-			float cMRAOFactors[4];
-			params[MRAOBias]->GetVecValue(cMRAOFactors, 4);
-			cMRAOFactors[3] += pbr_microshadows_globalstrength.GetFloat();
-			cMRAOFactors[3] = clamp(cMRAOFactors[3], 0.0f, 1.0f); // Saturate to avoid Explosions
-			pShaderAPI->SetPixelShaderConstant(PSREG_PBR_MRAO_FACTORS, cMRAOFactors);
+			float cMRAOMultiplier[4];
+			params[MRAOMultiplier]->GetVecValue(cMRAOMultiplier, 3);
+			pShaderAPI->SetPixelShaderConstant(PSREG_PBR_MRAOMULTIPLIER, cMRAOMultiplier);
+
+			float cMRAOBias[4];
+			params[MRAOBias]->GetVecValue(cMRAOBias, 3);
+			cMRAOBias[3] = params[MicroShadowBias]->GetFloatValue() + pbr_microshadows_globalstrength.GetFloat();
+			cMRAOBias[3] = clamp(cMRAOBias[3], 0.0f, 1.0f); // Saturate to avoid Explosions
+			pShaderAPI->SetPixelShaderConstant(PSREG_PBR_MRAOBIAS, cMRAOBias);
+
+			float cMRAOExponent[4];
+			params[MRAOExponent]->GetVecValue(cMRAOExponent, 3);
+			pShaderAPI->SetPixelShaderConstant(PSREG_PBR_MRAOEXPONENT, cMRAOExponent);
+			
+			
+			
 
 			// Emissive, specular factors, SSS intensity and power scale 
 			float vExtraFactors[4] =
