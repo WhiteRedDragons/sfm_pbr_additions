@@ -25,8 +25,9 @@ const float4 cDualLobeControls						: register(PSREG_SELFILLUM_SCALE_BIAS_EXP);
 
 const float3 cAmbientCube[6]						: register(PSREG_AMBIENT_CUBE);
 
-const float4 cVariousControls2						: register(PSREG_SHADER_CONTROLS_2);
-#define g_f1NormalMapFactor (cVariousControls2.x)
+const float4 cNormalMapControls						: register(PSREG_SHADER_CONTROLS_2);
+#define g_f3NormalMapFlips (cNormalMapControls.xyz)
+#define g_f1NormalMapFactor (cNormalMapControls.w)
 
 const float4 cEyePos								: register(PSREG_EYEPOS_SPEC_EXPONENT);
 #define g_f3CameraPos (cEyePos.xyz)
@@ -213,6 +214,9 @@ float4 main(PS_INPUT i) : COLOR
 	
 	// Fix Lighting when using NoCull caused by inverted Normals
 	f3NormalTS *= sign(i.NoCullDirection);
+
+	// Flip desired Channels 
+	f3NormalTS *= g_f3NormalMapFlips;
 
 	// Requested: A way to weaken Normal Maps
 	f3NormalTS = lerp(float3(0.0f, 0.0f, 1.0f), f3NormalTS, g_f1NormalMapFactor);

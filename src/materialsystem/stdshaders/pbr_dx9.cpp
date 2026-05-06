@@ -52,7 +52,7 @@ const Sampler_t SAMPLER_RANDOMROTATION	= SHADER_SAMPLER13;
 const Sampler_t SAMPLER_SHADOWDEPTH		= SHADER_SAMPLER14;
 
 // Convars
-static ConVar pbr_version("pbr_version", "1.00", FCVAR_CHEAT);
+static ConVar pbr_version("pbr_version", "1.05", FCVAR_CHEAT);
 static ConVar mat_fullbright("mat_fullbright", "0", FCVAR_CHEAT);
 static ConVar mat_specular("mat_specular", "1", FCVAR_NONE);
 static ConVar mat_pbr_parallaxmap("mat_pbr_parallaxmap", "1");
@@ -81,6 +81,11 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		// Proper Terminology
 		SHADER_PARAM(BumpMap,					SHADER_PARAM_TYPE_TEXTURE, "", "") // Required so we can receive Lighting
 		SHADER_PARAM(NormalMap,					SHADER_PARAM_TYPE_TEXTURE, "", "")
+
+		// Separate Parameters so for a OpenGL Normal you only need $..FlipG
+		SHADER_PARAM(NormalMap_FlipR,			SHADER_PARAM_TYPE_BOOL, "", "")
+		SHADER_PARAM(NormalMap_FlipG,			SHADER_PARAM_TYPE_BOOL, "", "")
+		SHADER_PARAM(NormalMap_FlipB,			SHADER_PARAM_TYPE_BOOL, "", "")
 		SHADER_PARAM(NormalMapFactor,			SHADER_PARAM_TYPE_FLOAT, "", "")
 
 		SHADER_PARAM(AlphaTestReference,		SHADER_PARAM_TYPE_FLOAT, "0", "")
@@ -738,14 +743,14 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			LightState_t lightState;
 			pShaderAPI->GetDX9LightState(&lightState);
 
-			float cVariousControls2[4] =
+			float cNormalMapControls[4] =
 			{
+				params[NormalMap_FlipR]->GetIntValue() ? -1.0f : 1.0f,
+				params[NormalMap_FlipG]->GetIntValue() ? -1.0f : 1.0f,
+				params[NormalMap_FlipB]->GetIntValue() ? -1.0f : 1.0f,
 				clamp(params[NormalMapFactor]->GetFloatValue(), 0.0f, 1.0f),
-				0.0f,
-				0.0f,
-				0.0f
 			};
-			pShaderAPI->SetPixelShaderConstant(PSREG_SHADER_CONTROLS_2, cVariousControls2);
+			pShaderAPI->SetPixelShaderConstant(PSREG_SHADER_CONTROLS_2, cNormalMapControls);
 
 			if (bHasDualLobe)
 			{
