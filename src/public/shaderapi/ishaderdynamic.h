@@ -101,6 +101,7 @@ enum StandardTextureId_t
 	TEXTURE_MORPH_ACCUMULATOR,
 
 	// A texture which contains morph weights
+	// ShiroDkxtro2: Correct Index - matches morphaccumulate_dx9.cpp
 	TEXTURE_MORPH_WEIGHTS,
 
 	// A snapshot of the frame buffer's depth. Currently only valid on the 360
@@ -199,20 +200,35 @@ public:
 
 	virtual void SetFloatRenderingParameter(int parm_number, float value) = 0;
 	virtual void SetIntRenderingParameter(int parm_number, int value) = 0 ;
-	virtual void SetVectorRenderingParameter(int parm_number, Vector const &value) = 0 ;
+	virtual void SetVectorRenderingParameter(int parm_number, Vector const &value) = 0;
 
-	virtual float GetFloatRenderingParameter(int parm_number) const = 0 ;
+	virtual float GetFloatRenderingParameter(int parm_number) const = 0;
 
-	virtual int GetIntRenderingParameter(int parm_number) const = 0 ;
+	virtual int GetIntRenderingParameter(int parm_number) const = 0;
 
-	virtual Vector GetVectorRenderingParameter(int parm_number) const = 0 ;
+	virtual Vector GetVectorRenderingParameter(int parm_number) const = 0;
 
 	virtual const FlashlightState_t &GetFlashlightStateEx( VMatrix &worldToTexture, ITexture **pFlashlightDepthTexture ) const = 0;
 
-	// ficool2: don't know
+	// This appears to set XYZ Proj. Tex. Position and Volumetrics
+	// So you pass in a complete *FlashlightState_t and it overwrites the current one with that
 	virtual void Unk32() = 0;
+
+	// float *a2, float *a3, int a4
+	// a2 is 3 Values
+	// a3 is 4 Values
+	// a4 is 10 Values
 	virtual void Unk33() = 0;
+
+	// int __thiscall sub_10014DC0(int this, int a2)
+	// Takes some kind of struct as input.
+	// Copes data from +196 into the struct to +788 in the ShaderAPI ( size 0x54u )
+	// Meaning this is data even further in than the last two Functions
 	virtual void Unk34() = 0;
+
+	// float *__thiscall sub_10014E40(float *this, float *a2, float *a3, float *a4)
+	// Appears to be the inverse of the above Function
+	// copies 0x54u from a4 + 197 and so on
 	virtual void Unk35() = 0;
 
 	virtual void GetDX9LightState( LightState_t *state ) const = 0;
@@ -256,7 +272,7 @@ public:
 	virtual void MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, bool *pUnusedTexCoords ) = 0;
 
 
-	virtual void ExecuteCommandBuffer( uint8 *pCmdBuffer ) =0;
+	virtual void ExecuteCommandBuffer( uint8 *pCmdBuffer ) = 0;
 
 	// Interface for mat system to tell shaderapi about color correction
 	virtual void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo ) = 0;
@@ -266,26 +282,39 @@ public:
 	virtual void SetScreenSizeForVPOS( int pshReg = 32 ) = 0;
 	virtual void SetVSNearAndFarZ( int vshReg ) = 0;
 
-	// ficool2: might be above SetVSNearAndFarZ, not sure
+	// SetPSNearAndFarZ or SetVSNearAndFarZ
+	// Would need some trial and error, but both of these Functions are near identical, they do the same Thing
 	virtual void Unk57() = 0;
 
 	virtual float GetFarZ() = 0;
 
-	// ficool2: some virtual between this and GetTessellationMode is gone.. probably wrong too
-	//virtual bool SinglePassFlashlightModeEnabled( void ) = 0;
-
-	virtual void SetDepthFeatheringPixelShaderConstant( int iConstant, float fDepthBlendScale ) = 0;
-
-	virtual void GetFlashlightShaderInfo( bool *pShadowsEnabled, bool *pUberLight ) const = 0;
-
-	virtual float GetFlashlightAmbientOcclusion( ) const = 0;
-
 	// allows overriding texture filtering mode on an already bound texture.
 	virtual void SetTextureFilterMode( Sampler_t sampler, TextureFilterMode_t nMode ) = 0;
 
-	virtual TessellationMode_t GetTessellationMode() const = 0;
+	virtual void SetDepthFeatheringPixelShaderConstant( int iConstant, float fDepthBlendScale ) = 0;
 
-	virtual float GetSubDHeight() = 0;
+	// This one might be incorroect
+	// _BYTE *__thiscall sub_10014C30(_BYTE *this, _BYTE *a2, bool *a3, _BYTE *a4)
+	// Perhaps the last one returns m_bVolumetric?
+	virtual void GetFlashlightShaderInfo( bool *pShadowsEnabled, bool *pUberLight ) const = 0;
+
+	// +44 into ShaderAPI is flAO
+	virtual float GetFlashlightAmbientOcclusion() const = 0;
+
+	// ShiroDkxtro2: This Function is called in ComputeModulationFlags
+	// No clue as to what does it do.
+	// Returns this[2828]
+	virtual int Unknown63() const = 0;
+
+	// int __thiscall sub_10010750(_DWORD *this, int a2, int a3)
+	// Not sure about this one
+	virtual void Unknown64() const = 0;
+
+	// These are still Functional on SFM, they have just been displaced
+	virtual TessellationMode_t GetTessellationMode() const = 0;
+	virtual float GetSubDHeight() const = 0;
+
+	// Followed by this should be SetViewports and GetViewports. See ASW ishaderapi.h
 
 #ifdef _X360
 	// Enables X360-specific command predication.

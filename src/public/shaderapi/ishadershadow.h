@@ -134,14 +134,16 @@ public:
 	// Sets the default *shadow* state
 	virtual void SetDefaultState() = 0;
 
-	// ficool2: No idea
-	virtual void Unk1() = 0;
-
 	// Methods related to depth buffering
 	virtual void DepthFunc( ShaderDepthFunc_t depthFunc ) = 0;
 	virtual void EnableDepthWrites( bool bEnable ) = 0;
+
 	virtual void EnableDepthTest( bool bEnable ) = 0;
 	virtual void EnablePolyOffset( PolygonOffsetMode_t nOffsetMode ) = 0;
+
+	// Same as EnableColorWrites but per-Channel
+	// NOTE: Cannot be overloaded virtual Function, it will just crash the Game if you try that
+	virtual int EnableColorWritesPerChannel(char r, char g, char b) = 0;
 
 	// Suppresses/activates color writing 
 	virtual void EnableColorWrites( bool bEnable ) = 0;
