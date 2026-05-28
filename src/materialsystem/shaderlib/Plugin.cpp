@@ -7,13 +7,15 @@
 
 #include <Windows.h>
 
+const char *ccDescription = "ShiroDkxtro2's Version of the PBR Shader";
+
 class CPlugin_ShaderPBR : public IServerPluginCallbacks
 {
 	bool Load( CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory ) override;
 	void Unload( void ) override {}
 	void Pause( void ) override {}
 	void UnPause( void ) override {}
-	const char* GetPluginDescription( void ) override { return "ZMR PBR Shader"; }
+	const char* GetPluginDescription( void ) override { return ccDescription; }
 	void LevelInit( char const* pMapName ) override {}
 	void ServerActivate( edict_t* pEdictList, int edictCount, int clientMax ) override {}
 	void GameFrame( bool simulating ) override {}
@@ -36,7 +38,7 @@ class CPlugin_ShaderPBR : public IServerPluginCallbacks
 
 bool CPlugin_ShaderPBR::Load( CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory )
 {
-	ConColorMsg( Color( 255, 255, 255, 255 ), "[ZMR PBR Shader] Loading...\n" ); 
+	ConColorMsg( Color( 255, 255, 255, 255 ), "[PBR Shader - Modified by ShiroDkxtro2] Loading...\n" ); 
 
 	materials = ( IMaterialSystem* )interfaceFactory( MATERIAL_SYSTEM_INTERFACE_VERSION, NULL );
 
