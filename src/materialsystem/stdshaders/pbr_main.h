@@ -1,84 +1,89 @@
-// FIXME: Kill stock Headers.
-#include "common_ps_fxc.h"
-#include "common_flashlight_fxc.h"
-#include "common_lightmappedgeneric_fxc.h"
-#include "shader_constant_register_map.h"
+//==========================================================================//
+//	Define non-existant Combos
+//==========================================================================//
 
+#if !defined(PROJTEX)
+	#define PROJTEX 0
+#endif
+
+#if !defined(NUM_LIGHTS)
+	#define NUM_LIGHTS 0
+#endif
+
+#if !defined(WORLD_NORMAL)
+	#define WORLD_NORMAL 0
+#endif
+
+//==========================================================================//
+//	Unpack Combos
+//==========================================================================//
+
+// .. TBD
+
+//==========================================================================//
+//	Common Definitions
+//==========================================================================//
+
+//#define TONEMAP_SCALE_NONE
+#define TONEMAP_SCALE_LINEAR
+//#define TONEMAP_SCALE_GAMMA
+
+//==========================================================================//
+//	Constants, Functions, Includes
+//==========================================================================//
+
+// Include for all Pixel Shaders
+#include "lux_common_ps_fxc.h"
 #include "pbr_common_ps2_3_x.h"
 
-#define SFM_BLACKBOX_MODE 1
-
-// FIXME: Register Macros dedicated to this Shader. Stop copy pasting Stock Shader Slop 
-const float4 cBaseColor								: register(PSREG_SELFILLUMTINT);
-#define g_f3Tint (cBaseColor.rgb)
-#define g_f1Fullbright (cBaseColor.w)
-
-const float4 cDiffuseModulation						: register(PSREG_DIFFUSE_MODULATION);
-
-const float4 cShadowTweaks							: register(PSREG_ENVMAP_TINT__SHADOW_TWEAKS);
-
-#if DUALLOBE
-const float4 cDualLobeControls						: register(PSREG_SELFILLUM_SCALE_BIAS_EXP);
-#define g_f1DualLobe_RoughnessBias	(cDualLobeControls.x)
-#define g_f1DualLobe_LerpFactor		(cDualLobeControls.y)
+#if PROJTEX
+	#include "pbr_common_projtex.h"
 #endif
 
-const float3 cAmbientCube[6]						: register(PSREG_AMBIENT_CUBE);
+// Register Map for this Shader
+#include "pbr_registermap.h"
 
-const float4 cNormalMapControls						: register(PSREG_SHADER_CONTROLS_2);
-#define g_f3NormalMapFlips (cNormalMapControls.xyz)
-#define g_f1NormalMapFactor (cNormalMapControls.w)
+const float4 cControls1				: register(PBR_PS_FLOAT_CONTROLS1);
+#define g_f1Fullbright					(cControls1.x)
+#define g_f1MicroShadowFactor			(cControls1.y)
 
-const float4 cEyePos								: register(PSREG_EYEPOS_SPEC_EXPONENT);
-#define g_f3CameraPos (cEyePos.xyz)
-#define g_f1EnvMapMips (cEyePos.w)
+const float4 cControls2				: register(PBR_PS_FLOAT_CONTROLS2);
+#define g_f1DualLobe_RoughnessBias		(cControls2.x)
+#define g_f1DualLobe_LerpFactor			(cControls2.y)
+#define g_f1ParallaxDepth				(cControls2.z)
+#define g_f1ParallaxCenter				(cControls2.w)
 
-const float4 cFogParams								: register(PSREG_FOG_PARAMS);
+const float4 cSSSControls1			: register(PBR_PS_FLOAT_SSSCONTROLS1);
+#define g_f3SSSColor					(cSSSControls1.rgb)
+#define g_f1SSSIntensity				(cSSSControls1.w)
 
-// These aren't occupied during regular passes
-const float4 cFlashlightAttenuationFactors			: register(PSREG_FLASHLIGHT_ATTENUATION);
-const float4 cProjTexPos							: register(PSREG_FLASHLIGHT_POSITION_RIM_BOOST);
-#define g_f3ProjTexPosition (cProjTexPos.xyz)
+const float4 cSSSControls2			: register(PBR_PS_FLOAT_SSSCONTROLS2);
+#define g_f1SSSPower					(cSSSControls2.x)
 
-const float4x4 xmFlashlightWorldToTexture			: register(PSREG_FLASHLIGHT_TO_WORLD_TEXTURE);
+const float4 cNormalMapControls		: register(PBR_PS_FLOAT_NORMALMAPCONTROLS);
+#define g_f3NormalMapFlips				(cNormalMapControls.xyz)
+#define g_f1NormalMapFactor				(cNormalMapControls.w)
 
-// This can be on the Flashlight Registers
-PixelShaderLightInfo cLightInfo[3]					: register(PSREG_LIGHT_INFO_ARRAY);         // 2 registers each - 6 registers total (4th light spread across w's)
-// This is c0 yet it is at the bottom instead of the top. Imagine having Order in your Room, clean your dishes btw
+const float4 cMRAOMultiplier		: register(PBR_PS_FLOAT_MRAO_SCALE);
+#define g_f3MRAOMultiplier				(cMRAOMultiplier.xyz)
 
-#if PARALLAXOCCLUSION
-const float4 cParallaxParms				: register(PSREG_SHADER_CONTROLS);
-#define g_f1ParallaxDepth (cParallaxParms.r)
-#define g_f1ParallaxCenter (cParallaxParms.g)
+const float4 cMRAOBias				: register(PBR_PS_FLOAT_MRAO_BIAS);
+#define g_f3MRAOBias					(cMRAOBias.xyz)
+
+const float4 cMRAOExponent			: register(PBR_PS_FLOAT_MRAO_EXPONENT);
+#define g_f3MRAOExponent				(cMRAOExponent.xyz)
+
+const float4 cScreenSizes			: register(LUX_PS_FLOAT_ASW_SCREENSIZE);
+#define g_f2ScreenTexelSize				(cScreenSizes.xy)
+#define g_f2ScreenHalfTexel				(cScreenSizes.zw)
+
+const float4 cSSAOControls			: register(LUX_PS_FLOAT_ASW_SSAOCONTROLS);
+#define g_f1SSAOStrength				(cSSAOControls.x)
+
+#if !PROJTEX
+const float3 cAmbientCube[6]		: register(LUX_PS_FLOAT_AMBIENTCUBE);
+PixelShaderLightInfo cLightInfo[3]	: register(LUX_PS_FLOAT_LIGHTDATA);
 #endif
-
-#if UBERLIGHT
-const float3 cSmoothEdge0				: register(PSREG_UBERLIGHT_SMOOTH_EDGE_0);
-const float3 cSmoothEdge1				: register(PSREG_UBERLIGHT_SMOOTH_EDGE_1);
-const float3 cSmoothOneOverWidth		: register(PSREG_UBERLIGHT_SMOOTH_EDGE_OOW);
-const float4 cShearRound				: register(PSREG_UBERLIGHT_SHEAR_ROUND);
-const float4 cAABB						: register(PSREG_UBERLIGHT_AABB);
-const float4x4 xmFlashlightWorldToLight : register(PSREG_UBERLIGHT_WORLD_TO_LIGHT);
-#endif
-
-const float4 cVariousControls		: register(PSREG_PBR_EXTRA_FACTORS); // Emissive, specular factor, SSS intensity, SSS power scale
-#define g_f1EmissiveFactor (cVariousControls.x)
-#define g_f1SpecularFactor (cVariousControls.y)
-#define g_f1SSSIntensity (cVariousControls.z)
-#define g_f1SSSPower (cVariousControls.w)
-
-const float4 cSSSColor				: register(PSREG_PBR_SSS_COLOR); // Subsurface scattering color
-#define g_f3SSSColor (cSSSColor.rgb)
-
-const float4 cMRAOMultiplier : register(PSREG_PBR_MRAOMULTIPLIER);
-#define g_f3MRAOMultiplier (cMRAOMultiplier.xyz)
-
-const float4 cMRAOBias : register(PSREG_PBR_MRAOBIAS);
-#define g_f3MRAOBias (cMRAOBias.xyz)
-#define g_f1MicroShadowFactor (cMRAOBias.w)
-
-const float4 cMRAOExponent : register(PSREG_PBR_MRAOEXPONENT);
-#define g_f3MRAOExponent (cMRAOExponent.xyz)
 
 //==================================================================================================
 // Samplers
@@ -92,87 +97,75 @@ const float4 cMRAOExponent : register(PSREG_PBR_MRAOEXPONENT);
 	sampler Sampler_MRAOTexture			: register(s1);
 #endif
 sampler Sampler_NormalTexture		: register(s2);
-#if WRINKLEMAP
+
+#if WRINKLEMAPS
 	sampler Sampler_Compress		: register(s3);
 	sampler Sampler_Stretch			: register(s4);
 	sampler Sampler_NormalCompress	: register(s5);
 	sampler Sampler_NormalStretch	: register(s6);
 #endif
+
 sampler Sampler_SSAO				: register(s7);
 
-#if EMISSIVE
-	sampler Sampler_EmissionTexture : register(s8);    // Emission texture
-#endif
-sampler Sampler_Lightwarp			: register(s9);
 sampler Sampler_ThicknessTexture	: register(s10);
 
-#if !FLASHLIGHT
-sampler Sampler_Lightmap			: register(s13);
-sampler Sampler_Envmap				: register(s14);
-#else
-sampler Sampler_ProjTexCookie		: register(s12);
-sampler Sampler_RandRot				: register(s13);
-sampler Sampler_ShadowDepth			: register(s14);
+#if !PROJTEX
+	sampler Sampler_Envmap				: register(s14);
 #endif
 
-// FIXME: use VFace Register to fix $NoCull Lighting
+
 struct PS_INPUT
 {
-	float2 vPos						: VPOS;
-	float4 WorldPos_ProjPosZ		: TEXCOORD0; // Always need Pos and Fog
-	float2 TexCoord					: TEXCOORD1;
-	float4 LightAttenuations		: TEXCOORD2;
-	float4 ProjPosXYW_WrinkleWeight : TEXCOORD4; // wrinkle weight in w
+	float2 ScreenPos				: VPOS;
+	float4 WorldPos_ProjPosZ		: TEXCOORD0;
+	float4 TexCoords1				: TEXCOORD1;
 
-	// FIXME: Not used on Models
-	float4 LightmapTexCoord1And2	: TEXCOORD5;
-	float4 LightmapTexCoord3		: TEXCOORD6;
+#if !PROJTEX
+	float4	LightAtten				: TEXCOORD3;
+#endif
+		
+#if WRINKLEMAPS
+	float WrinkleWeight				: TEXCOORD4;
+#endif
+	
+#if WORLD_NORMAL
+	float SSAOFactor				: COLOR;
+#endif
 
 	float3 Tangent					: TANGENT;
-	float3 Bitangent				: BINORMAL;
+	float3 Binormal					: BINORMAL;
 	float3 Normal					: NORMAL;
 
 	float NoCullDirection			: VFACE;
 };
 
-// Source
-// https://advances.realtimerendering.com/other/2016/naughty_dog/NaughtyDog_TechArt_Final.pdf
-float ApplyMicroShadow(float ao, float3 N, float3 L, float shadow)
-{
-	float aperture = 2.0 * ao * ao;
-	float microShadow = saturate(abs(dot(L, N)) + aperture - 1.0f);
-	return shadow * microShadow;
-}
-
 // Entry point
 // FIXME: Move Entry Point and VS Output Struct to a Header
 float4 main(PS_INPUT i) : COLOR
 {
-	#if USEENVAMBIENT
-		float3 EnvAmbientCube[6];
-		setupEnvMapAmbientCube(EnvAmbientCube, Sampler_Envmap);
-	#else
-		#define EnvAmbientCube cAmbientCube
-	#endif
+	PBR_Data_t info = PBR_Data_t_Constructor();
+	info.f3WorldPos = i.WorldPos_ProjPosZ.xyz;
+	info.f1MicroShadowStrength = g_f1MicroShadowFactor;
 
-	float3 f3WorldPos = i.WorldPos_ProjPosZ.xyz;
-	
-	float3 f3ProjPos = float3(i.ProjPosXYW_WrinkleWeight.xy, i.WorldPos_ProjPosZ.w);
-	f3ProjPos.xy /= i.ProjPosXYW_WrinkleWeight.z; // Perspective Divide
+	float2 f2ScreenUV = i.ScreenPos * g_f2ScreenTexelSize + g_f2ScreenHalfTexel;
+	float f1Depth = i.WorldPos_ProjPosZ.w;
 
 	// Use a proper TBN Matrix instead of the cursed and broken Screenspace Reconstructed Tangents
-	float3x3 xmTBN = float3x3(i.Tangent, i.Bitangent, i.Normal);
-	float3 f3NormalVertex = i.Normal;
+	float3x3 xmTBN = float3x3(i.Tangent, i.Binormal, i.Normal);
 	
-	float3 f3ViewDir = g_f3CameraPos - f3WorldPos;
+	// Need unnormalized ViewDir for Parallax Mapping
+	info.f3ViewDir = g_f3EyePos - info.f3WorldPos;
 	
 	#if PARALLAXOCCLUSION
-		float3 f3ViewDirTS = worldToRelative(f3ViewDir, i.Tangent, i.Bitangent, f3NormalVertex);
-		float2 f2TexCoord = parallaxCorrect(i.TexCoord, f3ViewDirTS, f3ViewDir, i.Normal, Sampler_NormalTexture, g_f1ParallaxDepth, g_f1ParallaxCenter);
+		float3 f3ViewDirTS = worldToRelative(info.f3ViewDir, i.Tangent, i.Binormal, i.Normal);
+		float2 f2TexCoord = parallaxCorrect(i.TexCoords1.xy, f3ViewDirTS, info.f3ViewDir, i.Normal, Sampler_NormalTexture, g_f1ParallaxDepth, g_f1ParallaxCenter);
 	#else
-		float2 f2TexCoord = i.TexCoord;
+		float2 f2TexCoord = i.TexCoords1.xy;
 	#endif
 	
+	// Creation was non-normalized so normalize it now
+	info.f3ViewDir = normalize(info.f3ViewDir);
+
 	float4 f4BaseTexture;
 	#if SPECULARGLOSSINESS
 		f4BaseTexture = tex2D(Sampler_Diffuse, f2TexCoord);
@@ -183,8 +176,8 @@ float4 main(PS_INPUT i) : COLOR
 	float4 f4NormalTS = tex2D(Sampler_NormalTexture, f2TexCoord);
 	
 	float f1WrinkleAmount, f1StretchAmount, f1TextureAmount;
-	#if WRINKLEMAP
-		float f1WrinkleWeight = i.ProjPosXYW_WrinkleWeight.w;
+	#if WRINKLEMAPS
+		float f1WrinkleWeight = i.WrinkleWeight;
 	
 		f1WrinkleAmount = saturate(-f1WrinkleWeight);	// One of these two is zero
 		f1StretchAmount = saturate(f1WrinkleWeight);	// while the other is in the 0..1 range
@@ -208,12 +201,13 @@ float4 main(PS_INPUT i) : COLOR
 					   + f1StretchAmount * f3StretchNormalTS;
 	#endif
 	
-	f4BaseTexture.rgb *= g_f3Tint;
+	f4BaseTexture.rgb *= g_f3DefaultTint;
 	
+	// Decompress TangentSpace NormalMap
 	float3 f3NormalTS = f4NormalTS.xyz * 2.0f - 1.0f;
 	
-	// Fix Lighting when using NoCull caused by inverted Normals
-	f3NormalTS *= sign(i.NoCullDirection);
+	// Fix Lighting when using $NoCull, caused by inverted Normals
+	f3NormalTS *= i.NoCullDirection;
 
 	// Flip desired Channels 
 	f3NormalTS *= g_f3NormalMapFlips;
@@ -221,12 +215,10 @@ float4 main(PS_INPUT i) : COLOR
 	// Requested: A way to weaken Normal Maps
 	f3NormalTS = lerp(float3(0.0f, 0.0f, 1.0f), f3NormalTS, g_f1NormalMapFactor);
 
-	float3 f3NormalWS = normalize(mul(f3NormalTS, xmTBN));
+	info.f3NormalWS = normalize(mul(f3NormalTS, xmTBN));
 	#if WORLD_NORMAL
-		float fSSAODepth = i.LightmapTexCoord3.w;
-		return float4(f3NormalWS, fSSAODepth); // Does it want WS or TS? Original Code here used WS
-//	#else
-//		return float4(f3NormalWS * 0.5f + 0.5f, 1.0f);
+		float fSSAODepth = i.SSAOFactor;
+		return float4(info.f3NormalWS, fSSAODepth); // Does it want WS or TS? Original Code here used WS
 	#endif
 	
 	#if SPECULARGLOSSINESS
@@ -261,223 +253,133 @@ float4 main(PS_INPUT i) : COLOR
 		float f1AmbientOcclusion = f4MRAOTexture.b;
 	#endif
 
-	#if DUALLOBE
-		float f1SecondaryRoughness = saturate(f1Roughness + g_f1DualLobe_RoughnessBias);
-	#endif
+	// Fill the Struct
+	info.f3DiffuseColor = f3DiffuseColor;
+	info.f3SpecularColor = f3SpecularColor;
+	info.f1Roughness = f1Roughness;
 
-	// TODO: This is needed at the end, make it easier for the Compiler to optimize it by putting it well, at the end where it's used
-	#if EMISSIVE
-		float3 f3Emission = tex2D(Sampler_EmissionTexture, f2TexCoord).xyz * g_f1EmissiveFactor;
+	#if DUALLOBE
+		float f1SecondaryRoughness = saturate(info.f1Roughness + g_f1DualLobe_RoughnessBias);
 	#endif
 
 	#if SUBSURFACESCATTERING
-		float1 f1Thickness = tex2D(Sampler_ThicknessTexture, f2TexCoord).r;
+		float f1Thickness = tex2D(Sampler_ThicknessTexture, f2TexCoord).r;
 	#endif
 
-	// SSAO Application
-	f3ProjPos.y *= -1.0f; // Flip Y for DirectX
-	f3ProjPos.xy = f3ProjPos.xy * 0.5f + 0.5f; // Linearize for UV
-	float f1SSAO = tex2Dlod(Sampler_SSAO, float4(f3ProjPos.xy, 0.0f, 0.0f)).r;
+	// Finalize AO with SSAO
+	float f1SSAO = tex2Dlod(Sampler_SSAO, float4(f2ScreenUV, 0.0f, 0.0f)).r;
+	f1SSAO = lerp(1.0f, f1SSAO, g_f1SSAOStrength);
+	info.f1AmbientOcclusion = min(f1AmbientOcclusion, f1SSAO);
 
-	// Merge our AO with the SSAO
-	f1AmbientOcclusion = min(f1AmbientOcclusion, f1SSAO);
-	
-	// Creation was non-normalized so normalize it now
-	f3ViewDir = normalize(f3ViewDir);
-	
 	// N.V
-	float f1NdotV = max(0, dot(f3NormalWS, f3ViewDir));
+	info.f1NdotV = max(0, dot(info.f3NormalWS, info.f3ViewDir));
 	
-	// This is fine but why tf, do we not use A. The Stock Function for doing this B. the intrinsic reflect() Function
-	float3 f3Reflect = 2.0 * f1NdotV * f3NormalWS - f3ViewDir;
+	// TODO: Use Reflect()
+	info.f3Reflect = 2.0 * info.f1NdotV * info.f3NormalWS - info.f3ViewDir;
 	
 	//==================================================================================================
-	// Indirect Lighting
+	// Direct Lighting
 	//==================================================================================================
-
-	// Start ambient
-	// FIXME: Variable Names VIII - Roman Numerals are going to get very hard soon. We call it "diffuseIrradiance" below and then "diffuseIBL"
-	// Oh but THIS? No this is just "Ambient Lighting" because we couldn't find something that sounded worse
-	float3 f3IndirectLighting = 0.0;
-	#if !SFM_BLACKBOX_MODE
-		#if !FLASHLIGHT
-		{
-			// FIXME: This is terrible, this should be split up drastically. Models and Brushes are two very different Lighting Models
-			float3 f3DiffuseLighting = ambientLookup(f3NormalWS, EnvAmbientCube, f3NormalTS, i.LightmapTexCoord1And2, i.LightmapTexCoord3, Sampler_Lightmap, cDiffuseModulation);
-
-			// FIXME: Nuke Schlick Fresnel and replace with UE4 Fresnel
-			float3 f3AmbientLightingFresnelTerm = fresnelSchlickRoughness(f3SpecularColor, f1NdotV, f1Roughness);
-
-			// YIKES what is THIS
-			// Where is BRDF I thought this is PBR
-		#if SPECULAR
-			float3 f3DiffuseContributionFactor = 1.0f - f3AmbientLightingFresnelTerm;
-		#else
-			float3 f3DiffuseContributionFactor = lerp(1.0f - f3AmbientLightingFresnelTerm, 0.0f, f3SpecularColor);;
-		#endif
-			f3DiffuseLighting = f3DiffuseContributionFactor * f3DiffuseColor * f3DiffuseLighting; // To Pi or not to PI mhmhmmh
-
-			// "UV" I call it R but that's whatever
-			// Note how we use roughness here and not roughness²
-			// You can bet that no one ever checked whether linear Roughness is more correct on UNFILTERED CUBEMAPS
-			// I say this because ENVMAPLOD doesn't make any sense and no one checked whether that was correct
-			float4 f4ReflectUV = float4(f3Reflect, f1Roughness * g_f1EnvMapMips);
-			float3 f3LookupHigh = ENV_MAP_SCALE * texCUBElod(Sampler_Envmap, f4ReflectUV).rgb;
-			float3 f3LookupLow = PixelShaderAmbientLight(f4ReflectUV, EnvAmbientCube).rgb; // FIXME: Truncation of Vector Type that we shouldn't have here
-
-			// NUKE: This is a Hack. Remove it 
-			// Get proper Cubemaps or you are not using PBR
-//			float3 f3IndirectSpecular = lerp(lookupHigh, lookupLow, roughness * roughness);
-			float3 f3IndirectSpecular = f3LookupHigh;
-		
-			// EnvBRDFApprox is ironically the most correct thing here
-			f3IndirectSpecular *= EnvBRDFApprox(f3SpecularColor, f1Roughness, f1NdotV);
-		
-			// Note that Brushes get Lightmaps with Direct and Indirect Lighting combined
-			// So this is Direct Diffuse + Indirect Diffuse + Indirect Specular for Brushes
-			// Mostly correct for us
-			f3IndirectLighting = (f3DiffuseLighting + f3IndirectSpecular) * f1AmbientOcclusion;
-		}
-		#endif
-	#endif
 	
 	// Start direct
-	float3 f3DirectLighting = 0.0; // FIXME: Variable Names IX - Direct what Light. Diffuse? Specular?
-	
-	// FIXME: use #if for #if Statement with Preprocessors not if() which can confuse the Compiler - Wasting your Compile TIme
-	#if !FLASHLIGHT
-	{ // <- Did AI write this Code? or why was this on the same Line as the if()?
-	
-		// This is so unconventional, why is this a uint.
+	float3 f3DirectDiffuse = 0.0;	
+	float3 f3DirectSpecular = 0.0f;
+
+	// Only do regular World Lights with > 0 Lights
+	#if (!PROJTEX && NUM_LIGHTS > 0)
+		float4 f4LightAtten = i.LightAtten;
+
+		// Unroll at when not looping > 1
+		#if (NUM_LIGHTS == 1)
+		[unroll]
+		#endif
 		for (uint n = 0; n < NUM_LIGHTS; ++n)
 		{
-			// Non-Incident Light Vector I assume
-			float3 f3LightDir = normalize(PixelShaderGetLightVector(f3WorldPos, cLightInfo, n));
-			float3 f3LightColor = PixelShaderGetLightColor(cLightInfo, n) * GetAttenForLight(i.LightAttenuations, n); // Li
-	
-			// NOTE: Shadow will be applied by N.L
-			// FIXME: Move into BRDF
-			float f1MicroShadow = ApplyMicroShadow(f1AmbientOcclusion, f3NormalWS, f3LightDir, 1.0f);
-			f3LightColor *= lerp(1.0f, f1MicroShadow, g_f1MicroShadowFactor);
-	
-			// Diffuse and Specular
+			float3 f3LightColor;
+			float3 f3LightDir;
+			if (n == 3)
+			{
+				f3LightColor = float3(cLightInfo[0].color.w, cLightInfo[0].pos.w, cLightInfo[1].color.w) * f4LightAtten[n];
+				f3LightDir = normalize(info.f3WorldPos - float3(cLightInfo[1].pos.w, cLightInfo[2].color.w, cLightInfo[2].pos.w));
+			}
+			else
+			{
+				f3LightColor = cLightInfo[n].color.xyz * f4LightAtten[n];
+				f3LightDir = normalize(info.f3WorldPos - cLightInfo[n].pos.xyz);
+			}
 
-			float3 f3DirectAndSpecular = calculateLight(f3LightDir, f3LightColor, f3ViewDir,
-				f3NormalWS, f3SpecularColor, f1Roughness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp);
+			// Non-Incident, I assume the Compiler will just reverse the subtraction Order above
+			f3LightDir = -f3LightDir;
+	
+			float3 f3CurrentDiffuse, f3CurrentSpecular;
+			calculateLight(info, f3LightDir, f3LightColor, info.f1Roughness, f3CurrentDiffuse, f3CurrentSpecular);
 
 			#if DUALLOBE
-				float3 f3SecondaryDirectAndSpecular = calculateLight(f3LightDir, f3LightColor, f3ViewDir,
-					f3NormalWS, f3SpecularColor, f1SecondaryRoughness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp);
+				float3 f3SecondDiffuse, f3SecondSpecular;
+				calculateLight(info, f3LightDir, f3LightColor, f1SecondaryRoughness, f3SecondDiffuse, f3SecondSpecular);
 			
-				f3DirectLighting += lerp(f3DirectAndSpecular, f3SecondaryDirectAndSpecular, g_f1DualLobe_LerpFactor);
-			#else
-				f3DirectLighting += f3DirectAndSpecular;
+				// NOTE: Diffuse is not made from Roughness at the Moment, therefore only need to lerp Specular
+				f3CurrentSpecular = lerp(f3CurrentSpecular, f3SecondSpecular, g_f1DualLobe_LerpFactor);
 			#endif
 
 			// FIXME: This should all be one BRDF
 			#if SUBSURFACESCATTERING
-			float3 f3SSSContribution = ComputeSubsurfaceScattering(f3NormalWS, f3LightDir, f3ViewDir,
-				f1Thickness.r, g_f3SSSColor, g_f1SSSIntensity, g_f1SSSPower);
-			f3DirectLighting += f3SSSContribution * f3LightColor;
+				float3 f3SSSContribution = ComputeSubsurfaceScattering(info.f3NormalWS, f3LightDir, info.f3ViewDir, f1Thickness, g_f3SSSColor, g_f1SSSIntensity, g_f1SSSPower);
+
+				// SSS is part of the Diffuse Contribution
+				f3CurrentDiffuse += f3SSSContribution * f3LightColor;
 			#endif
+
+			f3DirectDiffuse += f3CurrentDiffuse;
+			f3DirectSpecular += f3CurrentSpecular;
 		}
-	}
-	#endif
-	// End direct
-	
-	// Start flashlight
-	// FIXME: Aside from the utter undocumentedness of this Code compared to LUX the Variable Names are all over the Place
-	// It also passes the LightwarpSampler on here
-	#if FLASHLIGHT
-	{
-		float4 flashlightSpacePosition = mul(float4(f3WorldPos, 1.0), xmFlashlightWorldToTexture);
-		clip(flashlightSpacePosition.w); // stop projected textures from projecting backwards (only really happens if they have a big FOV because they get frustum culled.)
-		float3 vProjCoords = flashlightSpacePosition.xyz / flashlightSpacePosition.w;
-	
-		float3 delta = g_f3ProjTexPosition - f3WorldPos;
-		float distSquared = dot(delta, delta);
-		float dist = sqrt(distSquared);
-	
-		float3 flashlightColor = tex2D(Sampler_ProjTexCookie, vProjCoords.xy).rgb;
-		flashlightColor *= cFlashlightColor.xyz;
-	
-		float fAtten = saturate(dot(cFlashlightAttenuationFactors.xyz, float3(1.0, 1.0 / dist, 1.0 / distSquared)));
-	
-		#if FLASHLIGHTSHADOWS
-			float flashlightShadow = DoFlashlightShadow(Sampler_ShadowDepth, Sampler_RandRot, vProjCoords, f3ProjPos, FLASHLIGHTDEPTHFILTERMODE, cShadowTweaks, true);
-			float flashlightAttenuated = lerp(flashlightShadow, 1.0, cShadowTweaks.y);         // Blend between fully attenuated and not attenuated
-			flashlightShadow = saturate(lerp(flashlightAttenuated, flashlightShadow, fAtten));  // Blend between shadow and above, according to light attenuation
-	
-			flashlightColor *= flashlightShadow;
-		#endif
-	
-		flashlightColor *= fAtten;
-	
-		#if UBERLIGHT
-			float4 uberLightPosition = mul(float4(f3WorldPos.xyz, 1.0f), xmFlashlightWorldToLight).yzxw;
-			flashlightColor *= uberlight(uberLightPosition.xyz, cSmoothEdge0, cSmoothEdge1,
-							   cSmoothOneOverWidth, cShearRound.xy, cAABB, cShearRound.zw);
-		#endif
-	
-		float farZ = cFlashlightAttenuationFactors.w;
-		float endFalloffFactor = RemapValClamped(dist, farZ, 0.6 * farZ, 0.0, 1.0);
-	
-		float3 flashLightIntensity = flashlightColor * endFalloffFactor;
-	
-		float3 flashLightIn = normalize(delta);
-	
-		// FIXME: Move into BRDF
-		float f1MicroShadow = ApplyMicroShadow(f1AmbientOcclusion, f3NormalWS, flashLightIn, 1.0f);
-		flashLightIntensity *= lerp(1.0f, f1MicroShadow, g_f1MicroShadowFactor);
-	
-		// FIXME: The max(0, ) here implies a SERIOUS mathematical Problem
-		float3 f3DirectAndSpecular = max(0, calculateLight(flashLightIn, flashLightIntensity, f3ViewDir,
-			f3NormalWS, f3SpecularColor, f1Roughness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp));
+	#elif PROJTEX
+		float3 f3CurrentDiffuse, f3CurrentSpecular, f3LightColor, f3LightDir, f3Shadow;
+		PBR_ComputeProjectedTexture(info, f2ScreenUV, info.f1Roughness, PROJTEXSHADOWS, UBERLIGHT,
+			f3CurrentDiffuse, f3CurrentSpecular, f3LightColor, f3LightDir, f3Shadow);
 
 		#if DUALLOBE
-			float3 f3SecondaryDirectAndSpecular = max(0, calculateLight(flashLightIn, flashLightIntensity, f3ViewDir,
-				f3NormalWS, f3SpecularColor, f1SecondaryRoughness, f1NdotV, f3DiffuseColor, Sampler_Lightwarp));
+			float3 f3SecondDiffuse, f3SecondSpecular;
+
+			// This needs to use LightColor * Shadow so the occlusion is the same
+			calculateLight(info, f3LightDir, f3LightColor * f3Shadow, f1SecondaryRoughness, f3SecondDiffuse, f3SecondSpecular);
 		
-			f3DirectLighting += lerp(f3DirectAndSpecular, f3SecondaryDirectAndSpecular, g_f1DualLobe_LerpFactor);
-		#else
-			f3DirectLighting += f3DirectAndSpecular;
+			// NOTE: Diffuse is not made from Roughness at the Moment, therefore only need to lerp Specular
+			f3CurrentSpecular = lerp(f3CurrentSpecular, f3SecondSpecular, g_f1DualLobe_LerpFactor);
 		#endif
 	
 		// FIXME: This should all be one BRDF
 		#if SUBSURFACESCATTERING
-			float3 f3SSSContribution = ComputeSubsurfaceScattering(f3NormalWS, flashLightIn, f3ViewDir,
-				f1Thickness, g_f3SSSColor, g_f1SSSIntensity, g_f1SSSPower);
-			f3DirectLighting += f3SSSContribution * flashLightIntensity;
+			float3 f3SSSContribution = ComputeSubsurfaceScattering(info.f3NormalWS, f3LightDir, info.f3ViewDir, f1Thickness, g_f3SSSColor, g_f1SSSIntensity, g_f1SSSPower);
+
+			// SSS is part of the Diffuse Contribution
+			// NOTE: Unshadowed Light Color
+			f3CurrentDiffuse += f3SSSContribution * f3LightColor;
 		#endif
-	}
+
+		f3DirectDiffuse += f3CurrentDiffuse;
+		f3DirectSpecular += f3CurrentSpecular;
 	#endif
-	
-	float3 f3CombinedLighting = f3DirectLighting + f3IndirectLighting;
+
+	float f1Alpha = f4BaseTexture.a * g_f1AlphaModulation; // Need $Alpha and $Alpha2 for Premultiplied Alpha
+
+	// On Materials like Glass the Background is basically the Diffuse Result
+	// Technically the Surface itself can have *some* Diffuse ( Plastics ), but for now this will work for most translucents
+	// Specular Contributions are unaffected by Opacity.
+	// Another way to solve this is to predivide Specular by the Alpha, but it will lead to visual Artifacts
+	#if PREMULTIPLIEDALPHA
+		f3DirectDiffuse *= f1Alpha;
+	#endif
+
+	// No indirect Lighting right now
+	float3 f3CombinedLighting = f3DirectDiffuse + f3DirectSpecular;
 
 	// When Lighting is disabled the Ambient Cube is fullbright'ed
 	// Since I disabled all the Indirect Lighting Code we need to account for it differently.
 	// This will essentially do the same Thing:
-	#if (SFM_BLACKBOX_MODE && !FLASHLIGHT)
-		f3CombinedLighting += f3DiffuseColor * f1AmbientOcclusion * g_f1Fullbright;
-	#endif
-
-	// This is not !FLASHLIGHT. Projected Textures disappear into Fog
-	float f1FogFactor = CalcPixelFogFactor(PIXELFOGTYPE, cFogParams, g_f3CameraPos, f3WorldPos.xyz, f3ProjPos.z);
-	
-	// This is alos !FLASHLIGHT but no one ever noticed
-	float f1Alpha = f4BaseTexture.a;
-	#if !FLASHLIGHT
-		#if (WRITEWATERFOGTODESTALPHA && (PIXELFOGTYPE == PIXEL_FOG_TYPE_HEIGHT))
-			f1Alpha = f1FogFactor;
-		#endif
-	
-		// This is alos !FLASHLIGHT but no one ever noticed
-		bool bWriteDepthToAlpha = (WRITE_DEPTH_TO_DESTALPHA != 0) && (WRITEWATERFOGTODESTALPHA == 0);
-	
-		#if (EMISSIVE && !FLASHLIGHT)
-			f3CombinedLighting += f3Emission;
-		#endif
+	#if !PROJTEX
+		f3CombinedLighting = info.f3DiffuseColor * info.f1AmbientOcclusion * g_f1Fullbright;
 	#endif
 	
-	return FinalOutput(float4(f3CombinedLighting, f1Alpha), f1FogFactor, PIXELFOGTYPE, TONEMAP_SCALE_LINEAR, bWriteDepthToAlpha, f3ProjPos.z);
+	return LUX_Finalise(float4(f3CombinedLighting, f1Alpha), info.f3WorldPos, f1Depth);
 }

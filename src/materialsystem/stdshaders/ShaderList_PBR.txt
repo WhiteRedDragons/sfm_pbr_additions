@@ -18,3 +18,4 @@ pbr_mrao_ps30.fxc
 pbr_mrao_projtex_ps30.fxc
 pbr_sg_ps30.fxc
 pbr_sg_projtex_ps30.fxc
+pbr_worldnormal_ps30.fxc

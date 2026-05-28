@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectName>shader_modifiedthexapbr</ProjectName>
+    <ProjectName>shirodkxtro2_pbr</ProjectName>
     <ProjectGuid>{1A1149D9-CB1B-BF85-19CA-C9C2996BFDE8}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -38,12 +38,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\Program Files (x86)\Steam\steamapps\common\SourceFilmmaker\game\usermod\addons\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">V:\Code\Public\sfm_pbr_additions\game\usermod</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\Debug\.\</IntDir>
     <PreBuildEventUseInBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</PreBuildEventUseInBuild>
     <PreLinkEventUseInBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</PreLinkEventUseInBuild>
     <PostBuildEventUseInBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</PostBuildEventUseInBuild>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\Program Files (x86)\Steam\steamapps\common\SourceFilmmaker\game\usermod\addons\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">V:\Code\Public\sfm_pbr_additions\game\usermod</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\Release\.\</IntDir>
     <PreBuildEventUseInBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</PreBuildEventUseInBuild>
     <PreLinkEventUseInBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</PreLinkEventUseInBuild>
@@ -187,11 +187,24 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\stdshaders\BaseVSShader.cpp" />
+    <ClCompile Include="..\stdshaders\cpp_convars.cpp" />
+    <ClCompile Include="..\stdshaders\cpp_floatx.cpp" />
     <ClCompile Include="..\stdshaders\pbr_dx9.cpp" />
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\Cloak.cpp" />
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\EmissiveBlend.cpp" />
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\FleshInterior.cpp" />
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\MeshOutline.cpp" />
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\RimLightPass.cpp" />
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\SheenPass.cpp" />
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\SSAODrawNormalPass.cpp" />
     <ClCompile Include="BaseShader.cpp" />
     <ClCompile Include="Plugin.cpp" />
+    <ClCompile Include="ProxyShaderAPI.cpp" />
+    <ClCompile Include="ProxyShaderShadow.cpp" />
     <ClCompile Include="ShaderDLL.cpp" />
     <ClCompile Include="shaderlib_cvar.cpp" />
+    <ClCompile Include="ShaderSpew.cpp" />
+    <ClCompile Include="VCSHotReload.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\public\tier0\basetypes.h" />
@@ -227,12 +240,28 @@
     <ClInclude Include="..\..\public\vmatrix.h" />
     <ClInclude Include="..\..\public\vplane.h" />
     <ClInclude Include="..\..\public\vstdlib\vstdlib.h" />
-    <ClInclude Include="..\..\public\shaderlib\BaseShader.h" />
-    <ClInclude Include="..\..\public\shaderlib\commandbuilder.h" />
-    <ClInclude Include="..\..\public\shaderlib\cshader.h" />
-    <ClInclude Include="..\..\public\shaderlib\ShaderDLL.h" />
+    <ClInclude Include="..\stdshaders\BaseVSShader.h" />
+    <ClInclude Include="..\stdshaders\cpp_convars.h" />
+    <ClInclude Include="..\stdshaders\cpp_floatx.h" />
+    <ClInclude Include="..\stdshaders\cpp_lux_commandbuilder.h" />
+    <ClInclude Include="..\stdshaders\cpp_lux_shared.h" />
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\Cloak.h" />
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\EmissiveBlend.h" />
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\FleshInterior.h" />
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\MeshOutline.h" />
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\RimLightPass.h" />
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\SheenPass.h" />
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\SSAODrawNormalPass.h" />
+    <ClInclude Include="BaseShader.h" />
+    <ClInclude Include="cshader.h" />
+    <ClInclude Include="ishadersystem.h" />
+    <ClInclude Include="ProxyShaderAPI.h" />
+    <ClInclude Include="ProxyShaderShadow.h" />
+    <ClInclude Include="ShaderDLL.h" />
     <ClInclude Include="shaderDLL_Global.h" />
     <ClInclude Include="shaderlib_cvar.h" />
+    <ClInclude Include="ShaderSpew.h" />
+    <ClInclude Include="VCSHotReload.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

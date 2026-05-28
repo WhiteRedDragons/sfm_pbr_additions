@@ -13,8 +13,17 @@
     <Filter Include="Header Files">
       <UniqueIdentifier>{75095ff4-12bb-46a8-af82-4beedc323eeb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Shaders">
+    <Filter Include="Source Files\BaseShader">
+      <UniqueIdentifier>{a8494009-ea26-4e46-86d8-63aa6d5a298d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\BaseVSShader">
+      <UniqueIdentifier>{4f251d95-f998-4a61-a352-67b916eba394}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shaders %28C++%29">
       <UniqueIdentifier>{9b33c2d7-68a8-43c6-9151-55448ab3f24a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shaders %28C++%29\Renderpasses">
+      <UniqueIdentifier>{fdf6d0fa-8d17-486e-95e9-f40a4702fb39}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -38,23 +47,62 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BaseShader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ShaderDLL.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="shaderlib_cvar.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Plugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\stdshaders\pbr_dx9.cpp">
-      <Filter>Source Files\Shaders</Filter>
+      <Filter>Source Files\Shaders %28C++%29</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseShader.cpp">
+      <Filter>Source Files\BaseShader</Filter>
+    </ClCompile>
+    <ClCompile Include="ProxyShaderAPI.cpp">
+      <Filter>Source Files\BaseShader</Filter>
+    </ClCompile>
+    <ClCompile Include="ProxyShaderShadow.cpp">
+      <Filter>Source Files\BaseShader</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderDLL.cpp">
+      <Filter>Source Files\BaseShader</Filter>
+    </ClCompile>
+    <ClCompile Include="shaderlib_cvar.cpp">
+      <Filter>Source Files\BaseShader</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderSpew.cpp">
+      <Filter>Source Files\BaseShader</Filter>
+    </ClCompile>
+    <ClCompile Include="VCSHotReload.cpp">
+      <Filter>Source Files\BaseShader</Filter>
     </ClCompile>
     <ClCompile Include="..\stdshaders\BaseVSShader.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\BaseVSShader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\stdshaders\cpp_convars.cpp">
+      <Filter>Source Files\BaseVSShader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\stdshaders\cpp_floatx.cpp">
+      <Filter>Source Files\BaseVSShader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\Cloak.cpp">
+      <Filter>Source Files\Shaders %28C++%29\Renderpasses</Filter>
+    </ClCompile>
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\EmissiveBlend.cpp">
+      <Filter>Source Files\Shaders %28C++%29\Renderpasses</Filter>
+    </ClCompile>
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\FleshInterior.cpp">
+      <Filter>Source Files\Shaders %28C++%29\Renderpasses</Filter>
+    </ClCompile>
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\MeshOutline.cpp">
+      <Filter>Source Files\Shaders %28C++%29\Renderpasses</Filter>
+    </ClCompile>
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\RimLightPass.cpp">
+      <Filter>Source Files\Shaders %28C++%29\Renderpasses</Filter>
+    </ClCompile>
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\SheenPass.cpp">
+      <Filter>Source Files\Shaders %28C++%29\Renderpasses</Filter>
+    </ClCompile>
+    <ClCompile Include="..\stdshaders\shadersource\renderpasses\SSAODrawNormalPass.cpp">
+      <Filter>Source Files\Shaders %28C++%29\Renderpasses</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -157,22 +205,70 @@
     <ClInclude Include="..\..\public\vstdlib\vstdlib.h">
       <Filter>External Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\public\shaderlib\BaseShader.h">
+    <ClInclude Include="BaseShader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\public\shaderlib\commandbuilder.h">
+    <ClInclude Include="cshader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\public\shaderlib\cshader.h">
+    <ClInclude Include="ishadersystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\public\shaderlib\ShaderDLL.h">
+    <ClInclude Include="ProxyShaderAPI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProxyShaderShadow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderDLL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="shaderDLL_Global.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="shaderlib_cvar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderSpew.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VCSHotReload.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdshaders\BaseVSShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdshaders\cpp_convars.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdshaders\cpp_floatx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdshaders\cpp_lux_commandbuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdshaders\cpp_lux_shared.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\Cloak.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\EmissiveBlend.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\FleshInterior.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\MeshOutline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\RimLightPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\SheenPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdshaders\shadersource\renderpasses\SSAODrawNormalPass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

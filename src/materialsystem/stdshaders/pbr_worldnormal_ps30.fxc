@@ -6,18 +6,13 @@
 
 // STATIC: "PARALLAXOCCLUSION"          "0..1"
 // STATIC: "WRINKLEMAPS"				"0..1"
-// STATIC: "SUBSURFACESCATTERING"		"0..1"
-// STATIC: "DUALLOBE"                   "0..1"
-// STATIC: "PREMULTIPLIEDALPHA"         "0..1"
-
-// DYNAMIC: "PROJTEXSHADOWS"            "0..1"
-// DYNAMIC: "UBERLIGHT"                 "0..1"
 
 // SKIP: ( $PARALLAXOCCLUSION != 0 && $WRINKLEMAP != 0 )
-// SKIP: ( $PARALLAXOCCLUSION != 0 && $SUBSURFACESCATTERING != 0 )
-// SKIP: ( $DUALLOBE != 0 && $PREMULTIPLIEDALPHA != 0 )
 
-// Always ProjTex from this Shader
-#define PROJTEX 1
+#define SUBSURFACESCATTERING 0
+#define DUALLOBE 0
+#define PREMULTIPLIEDALPHA 0
+
+#define WORLD_NORMAL 1
 
 #include "pbr_main.h"
