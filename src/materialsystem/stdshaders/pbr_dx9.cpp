@@ -360,7 +360,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			else
 			{
 				EnableSampler(SAMPLER_BASECOLOR, true);
-				EnableSampler(SAMPLER_MRAO, true);
+				EnableSampler(SAMPLER_MRAO, false);
 			}
 			EnableSampler(SAMPLER_NORMAL, false);
 
