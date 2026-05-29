@@ -36,7 +36,7 @@ const Sampler_t SAMPLER_SSAO			= SHADER_SAMPLER7;
 const Sampler_t SAMPLER_THICKNESS		= SHADER_SAMPLER10; // FIXME: Nuke this
 
 // Convars
-static ConVar pbr_version("pbr_version", "1.10", FCVAR_CHEAT);
+static ConVar pbr_version("pbr_version", "1.12", FCVAR_CHEAT);
 static ConVar mat_pbr_parallaxmap("mat_pbr_parallaxmap", "1");
 
 static ConVar pbr_microshadows_globalstrength("pbr_microshadows_globalstrength", "0.50", FCVAR_NONE);
@@ -311,7 +311,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 			// For Premultiplied Alpha we need something less conventional
 			bool bTranslucent = (pContextData->m_nBlendType == BT_BLEND || pContextData->m_nBlendType == BT_BLENDADD);
-			bool bPremultipliedAlpha = bTranslucent && GetBool(PremultipliedAlpha);
+			bool bPremultipliedAlpha = !bHasDualLobe && bTranslucent && GetBool(PremultipliedAlpha);
 			if (bPremultipliedAlpha)
 			{
 				// NOTE: No $AlphaTest here
