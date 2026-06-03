@@ -10,6 +10,8 @@
 // Universal Constants
 static const float EPSILON = 0.00001;
 
+sampler Sampler_SSSLUT : register(s9);
+
 // I'm tried of passing 2000 Variables into every Function. Just fill this Thing and pass it on
 struct PBR_Data_t
 {
@@ -23,6 +25,8 @@ struct PBR_Data_t
 	float f1Roughness;
 	float f1AmbientOcclusion;
 	float f1MicroShadowStrength;
+	float f1Thickness;
+	float f1Curvature;
 };
 
 // Can't add a Constructor in HLSL, this will work though
@@ -39,6 +43,8 @@ PBR_Data_t PBR_Data_t_Constructor()
 	info.f1Roughness = 1.0f;
 	info.f1AmbientOcclusion = 1.0f;
 	info.f1MicroShadowStrength = 1.0f;
+	info.f1Thickness = 1.0f;
+	info.f1Curvature = 0.0f;
 	return info;
 }
 
@@ -124,15 +130,14 @@ float3x3 compute_tangent_frame(float3 N, float3 P, float2 uv, out float3 T, out 
 void calculateLight(PBR_Data_t info, float3 f3LightDir, float3 f3LightIntensity, float f1Roughness, out float3 f3DiffuseLight, out float3 f3SpecularLight)
 {
 	// Lh
-	float3 HalfAngle = normalize(f3LightDir + info.f3ViewDir);
-	float NdotL = max(0.0f, dot(info.f3NormalWS, f3LightDir));
-	float NdotV = max(0.0f, dot(info.f3NormalWS, info.f3ViewDir));
-	float cosHalfAngle = max(0.0, dot(info.f3NormalWS, HalfAngle));
+	float3 HalfAngle = normalize(f3LightDir + info.f3ViewDir);		// L+V ( lightIn + lightOut )
+	float NdotL = max(0.0f, dot(info.f3NormalWS, f3LightDir));		// N.L
+	float NdotV = max(0.0f, dot(info.f3NormalWS, info.f3ViewDir));	// N.V
+	float cosHalfAngle = max(0.0, dot(info.f3NormalWS, HalfAngle)); // N.H
 
 	// Apply MicroShadows to LightIntensity ( that way it applies to both Specular and Diffuse Color )
 	float f1MicroShadows = ApplyMicroShadow(info.f1AmbientOcclusion, info.f3NormalWS, f3LightDir, 1.0f);
 	f1MicroShadows = lerp(1.0f, f1MicroShadows, info.f1MicroShadowStrength);
-	f3LightIntensity *= f1MicroShadows * NdotL;
 
 	// F - Calculate Fresnel term for direct lighting
 	float3 F = fresnelSchlick(info.f3SpecularColor, max(0.0, dot(HalfAngle, info.f3ViewDir)));
@@ -152,9 +157,39 @@ void calculateLight(PBR_Data_t info, float3 f3LightDir, float3 f3LightIntensity,
 	// Cook-Torrance specular microfacet BRDF
 	float3 specularBRDF = (F * D * G) / max(EPSILON, 4.0 * NdotL * NdotV);
 
-	// Return Results
-	f3DiffuseLight = diffuseBRDF * f3LightIntensity;
-	f3SpecularLight = specularBRDF * f3LightIntensity;
+	// Remap N.L (and Curvature) using the Preintegration LUT
+	#if SUBSURFACESCATTERING
+		float f1Attenuation = dot(info.f3NormalWS, f3LightDir);
+		float f1TexCoordX = (f1Attenuation * 0.5f + 0.5f);
+		float f1TexCoordY = /info.f1Curvature);
+
+		float3 f3LightWrap = tex2Dlod(Sampler_SSSLUT, float4(f1TexCoordX, f1TexCoordY, 0.0f, 0.0f)).rgb;
+
+		// N.L < -0.8f will have some Artefacts because the Surfaces become incredibly thin.
+		// Especially on projected Textures!
+		// Avoid Backfaces being lit the further away from N.L == 0 it is
+		// Everything above > 0.0, just *1.0f
+		#if SUBSURFACESCATTERING
+			float f1BackScatterMask = 1.0f - saturate(-dot(info.f3NormalWS, f3LightDir));
+			f3LightWrap *= f1BackScatterMask;
+		#endif
+
+		// Lerp between SSS Results and regular N.L based on the Thickness of the Material
+		// With increasing Thickness, less SSS
+		f3LightWrap = lerp(f3LightWrap, (float3)NdotL, info.f1Thickness);
+
+		// Only apply SSS to Diffuse, not Specular!
+		f3DiffuseLight = diffuseBRDF * f3LightIntensity * f3LightWrap * f1MicroShadows;
+		f3SpecularLight = specularBRDF * f3LightIntensity * NdotL * f1MicroShadows;
+	#else
+
+		// (Shadow * Light Color) *= AO * N.L
+		f3LightIntensity *= f1MicroShadows * NdotL;
+
+		// Return Results
+		f3DiffuseLight = diffuseBRDF * f3LightIntensity;
+		f3SpecularLight = specularBRDF * f3LightIntensity;
+	#endif
 }
 
 #if PARALLAXOCCLUSION
@@ -234,29 +269,5 @@ float3 worldToRelative(float3 worldVector, float3 surfTangent, float3 surfBasis,
 	   dot(worldVector, surfNormal)
    );
 }
-
-#if SUBSURFACESCATTERING 
-float3 ComputeSubsurfaceScattering(float3 surfaceNormal, float3 lightDir, float3 viewDirection, float thickness, float3 sssColor, float intensity, float powerScale)
-{
-	float backlit = max(0.0, -dot(surfaceNormal, lightDir));
-
-	backlit = pow(backlit, 0.3);
-
-	// Avoid -f by saturating
-	float transmittance = pow(saturate(1.0 - thickness), powerScale);
-
-	float sssStrength = backlit * transmittance;
-
-	float ambientSSS = transmittance * 0.3;
-	sssStrength = max(sssStrength, ambientSSS);
-
-	float3 sssResult = sssColor * sssStrength * intensity;
-
-	float facingFactor = saturate(dot(viewDirection, surfaceNormal));
-	sssResult *= (0.7 + 0.3 * facingFactor);
-
-	return sssResult;
-}
-#endif
 
 #endif // PBR_COMMON_H_

@@ -54,11 +54,13 @@ const float4 cControls2				: register(PBR_PS_FLOAT_CONTROLS2);
 #define g_f1ParallaxCenter				(cControls2.w)
 
 const float4 cSSSControls1			: register(PBR_PS_FLOAT_SSSCONTROLS1);
-#define g_f3SSSColor					(cSSSControls1.rgb)
-#define g_f1SSSIntensity				(cSSSControls1.w)
+#define g_f1SSS_ThicknessFlip			(cSSSControls1.x)
+#define g_f1SSS_ThicknessExponent		(cSSSControls1.y)
+#define g_f1SSS_CurvatureFlip			(cSSSControls1.z)
+#define g_f1SSS_CurvatureExponent		(cSSSControls1.w)
 
-const float4 cSSSControls2			: register(PBR_PS_FLOAT_SSSCONTROLS2);
-#define g_f1SSSPower					(cSSSControls2.x)
+// const float4 cSSSControls2			: register(PBR_PS_FLOAT_SSSCONTROLS2);
+// #define g_f1SSSPower					(cSSSControls2.x)
 
 const float4 cNormalMapControls		: register(PBR_PS_FLOAT_NORMALMAPCONTROLS);
 #define g_f3NormalMapFlips				(cNormalMapControls.xyz)
@@ -105,9 +107,8 @@ sampler Sampler_NormalTexture		: register(s2);
 	sampler Sampler_NormalStretch	: register(s6);
 #endif
 
-sampler Sampler_SSAO				: register(s7);
-
-sampler Sampler_ThicknessTexture	: register(s10);
+sampler Sampler_SSAO					: register(s7);
+sampler Sampler_SubSurfaceControls		: register(s10);
 
 #if !PROJTEX
 	sampler Sampler_Envmap				: register(s14);
@@ -216,6 +217,7 @@ float4 main(PS_INPUT i) : COLOR
 	f3NormalTS = lerp(float3(0.0f, 0.0f, 1.0f), f3NormalTS, g_f1NormalMapFactor);
 
 	info.f3NormalWS = normalize(mul(f3NormalTS, xmTBN));
+
 	#if WORLD_NORMAL
 		float fSSAODepth = i.SSAOFactor;
 		return float4(info.f3NormalWS, fSSAODepth); // Does it want WS or TS? Original Code here used WS
@@ -263,7 +265,9 @@ float4 main(PS_INPUT i) : COLOR
 	#endif
 
 	#if SUBSURFACESCATTERING
-		float f1Thickness = tex2D(Sampler_ThicknessTexture, f2TexCoord).r;
+		float4 f4SSSControls = tex2D(Sampler_SubSurfaceControls, f2TexCoord);
+		info.f1Thickness = pow(abs(g_f1SSS_ThicknessFlip - f4SSSControls.x), g_f1SSS_ThicknessExponent);
+		info.f1Curvature = pow(abs(g_f1SSS_CurvatureFlip - f4SSSControls.y), g_f1SSS_CurvatureExponent);
 	#endif
 
 	// Finalize AO with SSAO
@@ -322,14 +326,6 @@ float4 main(PS_INPUT i) : COLOR
 				f3CurrentSpecular = lerp(f3CurrentSpecular, f3SecondSpecular, g_f1DualLobe_LerpFactor);
 			#endif
 
-			// FIXME: This should all be one BRDF
-			#if SUBSURFACESCATTERING
-				float3 f3SSSContribution = ComputeSubsurfaceScattering(info.f3NormalWS, f3LightDir, info.f3ViewDir, f1Thickness, g_f3SSSColor, g_f1SSSIntensity, g_f1SSSPower);
-
-				// SSS is part of the Diffuse Contribution
-				f3CurrentDiffuse += f3SSSContribution * f3LightColor;
-			#endif
-
 			f3DirectDiffuse += f3CurrentDiffuse;
 			f3DirectSpecular += f3CurrentSpecular;
 		}
@@ -346,15 +342,6 @@ float4 main(PS_INPUT i) : COLOR
 		
 			// NOTE: Diffuse is not made from Roughness at the Moment, therefore only need to lerp Specular
 			f3CurrentSpecular = lerp(f3CurrentSpecular, f3SecondSpecular, g_f1DualLobe_LerpFactor);
-		#endif
-	
-		// FIXME: This should all be one BRDF
-		#if SUBSURFACESCATTERING
-			float3 f3SSSContribution = ComputeSubsurfaceScattering(info.f3NormalWS, f3LightDir, info.f3ViewDir, f1Thickness, g_f3SSSColor, g_f1SSSIntensity, g_f1SSSPower);
-
-			// SSS is part of the Diffuse Contribution
-			// NOTE: Unshadowed Light Color
-			f3CurrentDiffuse += f3SSSContribution * f3LightColor;
 		#endif
 
 		f3DirectDiffuse += f3CurrentDiffuse;

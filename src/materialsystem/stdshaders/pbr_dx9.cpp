@@ -33,7 +33,9 @@ const Sampler_t SAMPLER_STRETCH			= SHADER_SAMPLER4;
 const Sampler_t SAMPLER_BUMPCOMPRESS	= SHADER_SAMPLER5;
 const Sampler_t SAMPLER_BUMPSTRETCH		= SHADER_SAMPLER6;
 const Sampler_t SAMPLER_SSAO			= SHADER_SAMPLER7;
-const Sampler_t SAMPLER_THICKNESS		= SHADER_SAMPLER10; // FIXME: Nuke this
+
+const Sampler_t SAMPLER_SSSLUT			= SHADER_SAMPLER9;
+const Sampler_t SAMPLER_SSSCONTROLS		= SHADER_SAMPLER10;
 
 // Convars
 static ConVar pbr_version("pbr_version", "1.12", FCVAR_CHEAT);
@@ -84,15 +86,11 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		SHADER_PARAM(AmbientOcclusion,			SHADER_PARAM_TYPE_FLOAT, "", "")
 
 		SHADER_PARAM(BumpFrame,					SHADER_PARAM_TYPE_INTEGER, "0", "Frame number for $bumpmap")
-		SHADER_PARAM(ThicknessTexture,			SHADER_PARAM_TYPE_TEXTURE, "", "Thickness map for SSS" )
 		SHADER_PARAM(Parallax,					SHADER_PARAM_TYPE_BOOL, "0", "Use Parallax Occlusion Mapping.")
 		SHADER_PARAM(ParallaxDepth,				SHADER_PARAM_TYPE_FLOAT, "0.0030", "Depth of the Parallax Map")
 		SHADER_PARAM(ParallaxCenter,			SHADER_PARAM_TYPE_FLOAT, "0.5", "Center depth of the Parallax Map")
 		SHADER_PARAM(EmissiveFactor,			SHADER_PARAM_TYPE_FLOAT, "1.0", "Emissive factor" )
 		SHADER_PARAM(SpecularFactor,			SHADER_PARAM_TYPE_FLOAT, "1.0", "Specular factor" )
-		SHADER_PARAM(SSSColor,					SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Subsurface scattering color")
-		SHADER_PARAM(SSSIntensity,				SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS intensity")
-		SHADER_PARAM(SSSPowerScale,				SHADER_PARAM_TYPE_FLOAT, "1.0", "SSS power scale")
 		SHADER_PARAM(Compress,					SHADER_PARAM_TYPE_TEXTURE, "", "Compression wrinklemap")
 		SHADER_PARAM(BumpCompress,				SHADER_PARAM_TYPE_TEXTURE, "", "Stretch bumpmap" )
 		SHADER_PARAM(Stretch,					SHADER_PARAM_TYPE_TEXTURE, "", "Stretch wrinklemap")
@@ -108,6 +106,13 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		SHADER_PARAM(DualLobe_LerpFactor,		SHADER_PARAM_TYPE_FLOAT, "", "")
 
 		SHADER_PARAM(PremultipliedAlpha,		SHADER_PARAM_TYPE_BOOL, "", "")
+
+		SHADER_PARAM(SSS_ControlTexture,		SHADER_PARAM_TYPE_BOOL, "", "Subsurface Scattering Data\n[R] Thickness.\n[G] Curvature.")
+		SHADER_PARAM(SSS_ThicknessFlip,			SHADER_PARAM_TYPE_BOOL, "", "Flips the Thickness Texture from $SSSControlTexture.")
+		SHADER_PARAM(SSS_ThicknessExponent,		SHADER_PARAM_TYPE_FLOAT, "", "Exponent Factor for the Thickness Texture.")
+		SHADER_PARAM(SSS_CurvatureFlip,			SHADER_PARAM_TYPE_BOOL, "", "Flips the Curvature texture from $SSSControlTexture.")
+		SHADER_PARAM(SSS_CurvatureExponent,		SHADER_PARAM_TYPE_FLOAT, "", "Exponent Factor for the Curvature Texture.")
+		SHADER_PARAM(SSS_PreintegrationLUT,		SHADER_PARAM_TYPE_TEXTURE, "", "[RGB] Preintegration Lookup-Texture.\nX is Theta, Y is 1/Curvature.")
 	END_SHADER_PARAMS
 
 	// Initializing parameters
@@ -166,12 +171,16 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				SetString(BumpStretch, GetString(BumpMap));
 		}
 
+		if(!IsDefined(SSS_PreintegrationLUT))
+			SetString(SSS_PreintegrationLUT, "LUT_SSSPreintegration");
+
+		DefaultFloat(SSS_ThicknessExponent, 1.0f);
+		DefaultFloat(SSS_CurvatureExponent, 1.0f);
+
 		DefaultFloat(NormalMapFactor, 1.0f);
 
 		DefaultFloat(EmissiveFactor, 1.0f);
 		DefaultFloat(SpecularFactor, 1.0f);
-		DefaultFloat(SSSIntensity, 1.0f);
-		DefaultFloat(SSSPowerScale, 1.0f);
 
 		DefaultFloat(DualLobe_RoughnessBias, -0.2f);
 		DefaultFloat(DualLobe_LerpFactor, 0.5f);
@@ -226,8 +235,12 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		LoadBumpMap(BumpMap);
 		LoadBumpMap(NormalMap);
 
-		// FIXME: This wasted AN ENTIRE samplers for some Greyscale Information that could be derived from an existing free Color Channel
-		LoadTexture(ThicknessTexture);
+		// Avoid Warnings about missing $SSSPreintegrationLUT when not actually using SSS
+		if(IsDefined(SSS_ControlTexture))
+		{
+			LoadTexture(SSS_ControlTexture);
+			LoadTexture(SSS_PreintegrationLUT);
+		}
 
 		if (IsDefined(Compress))
 		{
@@ -284,7 +297,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 		bool bHasDualLobe = GetBool(DualLobe);
 
-		bool bThicknessTexture = IsTextureLoaded(ThicknessTexture);
+		bool bHasSubSurfaceScattering = IsTextureLoaded(SSS_ControlTexture);
 		bool bWrinkleMapping = IsTextureLoaded(Compress);
 		bool bHasParallax = GetBool(Parallax);
 
@@ -378,9 +391,10 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			EnableSampler(SAMPLER_SSAO, true);
 
 			// s10
-			if (bThicknessTexture)
+			if (bHasSubSurfaceScattering)
 			{
-				EnableSampler(SAMPLER_THICKNESS, false);
+				EnableSampler(SAMPLER_SSSCONTROLS, false);
+				EnableSampler(SAMPLER_SSSLUT, true); // sRGB
 			}
 
 			// s13, s14, s15
@@ -405,7 +419,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 					DECLARE_STATIC_PIXEL_SHADER(pbr_sg_projtex_ps30);
 					SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
 					SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAPS, bWrinkleMapping);
-					SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
+					SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bHasSubSurfaceScattering);
 					SET_STATIC_PIXEL_SHADER_COMBO(DUALLOBE, bHasDualLobe);
 					SET_STATIC_PIXEL_SHADER_COMBO(PREMULTIPLIEDALPHA, bPremultipliedAlpha);
 					SET_STATIC_PIXEL_SHADER(pbr_sg_projtex_ps30);
@@ -415,7 +429,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 					DECLARE_STATIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
 					SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
 					SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAPS, bWrinkleMapping);
-					SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
+					SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bHasSubSurfaceScattering);
 					SET_STATIC_PIXEL_SHADER_COMBO(DUALLOBE, bHasDualLobe);
 					SET_STATIC_PIXEL_SHADER_COMBO(PREMULTIPLIEDALPHA, bPremultipliedAlpha);
 					SET_STATIC_PIXEL_SHADER(pbr_mrao_projtex_ps30);
@@ -428,7 +442,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 					DECLARE_STATIC_PIXEL_SHADER(pbr_sg_ps30);
 					SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
 					SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAPS, bWrinkleMapping);
-					SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
+					SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bHasSubSurfaceScattering);
 					SET_STATIC_PIXEL_SHADER_COMBO(DUALLOBE, bHasDualLobe);
 					SET_STATIC_PIXEL_SHADER_COMBO(PREMULTIPLIEDALPHA, bPremultipliedAlpha);
 					SET_STATIC_PIXEL_SHADER(pbr_sg_ps30);
@@ -438,7 +452,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 					DECLARE_STATIC_PIXEL_SHADER(pbr_mrao_ps30);
 					SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, bHasParallax);
 					SET_STATIC_PIXEL_SHADER_COMBO(WRINKLEMAPS, bWrinkleMapping);
-					SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bThicknessTexture);
+					SET_STATIC_PIXEL_SHADER_COMBO(SUBSURFACESCATTERING, bHasSubSurfaceScattering);
 					SET_STATIC_PIXEL_SHADER_COMBO(DUALLOBE, bHasDualLobe);
 					SET_STATIC_PIXEL_SHADER_COMBO(PREMULTIPLIEDALPHA, bPremultipliedAlpha);
 					SET_STATIC_PIXEL_SHADER(pbr_mrao_ps30);
@@ -536,9 +550,10 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 				}
 			}
 
-			if (bThicknessTexture)
+			if (bHasSubSurfaceScattering)
 			{
-				BindTexture(SAMPLER_THICKNESS, ThicknessTexture, 0); // FIXME: Missing Frame Parameter
+				BindTexture(SAMPLER_SSSCONTROLS, SSS_ControlTexture, -1); // FIXME: Missing Frame Parameter
+				BindTexture(SAMPLER_SSSLUT, SSS_PreintegrationLUT, -1);
 			}
 
 			if (bWrinkleMapping)
@@ -605,16 +620,21 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			}
 
 			// c4, c5
-			if(bThicknessTexture)
+			if(bHasSubSurfaceScattering)
 			{
+				// No additional Controls right now
 				float4 cSSSControls1;
-				cSSSControls1.rgb = GetFloat3(SSSColor);
-				cSSSControls1.w = GetFloat(SSSIntensity);
+				cSSSControls1.x = GetBool(SSS_ThicknessFlip) ? 1.0f : 0.0f;
+				cSSSControls1.y = GetFloat(SSS_ThicknessExponent);
+				cSSSControls1.z = GetBool(SSS_CurvatureFlip) ? 1.0f : 0.0f;
+				cSSSControls1.w = GetFloat(SSS_CurvatureExponent);
 				pShaderAPI->SetPixelShaderConstant(PBR_PS_FLOAT_SSSCONTROLS1, cSSSControls1);
 
+				/*
 				float4 cSSSControls2 = 0.0f;
 				cSSSControls2.x = GetFloat(SSSPowerScale);
 				pShaderAPI->SetPixelShaderConstant(PBR_PS_FLOAT_SSSCONTROLS2, cSSSControls2);
+				*/
 			}
 
 			// c6
