@@ -531,7 +531,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			{
 				if (bHasSpecular)
 				{
-					BindTexture(SAMPLER_SPECULAR, Specular, 0); // FIXME: Missing Frame Parameter
+					BindTexture(SAMPLER_SPECULAR, Specular, -1); // FIXME: Missing Frame Parameter
 				}
 				else
 				{
@@ -542,7 +542,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			{
 				if (bHasMRAOTexture)
 				{
-					BindTexture(SAMPLER_MRAO, MRAOTexture, 0); // FIXME: Missing Frame Parameter
+					BindTexture(SAMPLER_MRAO, MRAOTexture, -1); // FIXME: Missing Frame Parameter
 				}
 				else
 				{
@@ -558,10 +558,10 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 			if (bWrinkleMapping)
 			{
-				BindTexture(SAMPLER_COMPRESS, Compress, 0); // FIXME: Missing Frame Parameter
-				BindTexture(SAMPLER_STRETCH, Stretch, 0); // FIXME: Missing Frame Parameter
-				BindTexture(SAMPLER_BUMPCOMPRESS, BumpCompress, 0); // FIXME: Missing Frame Parameter
-				BindTexture(SAMPLER_BUMPSTRETCH, BumpStretch, 0); // FIXME: Missing Frame Parameter
+				BindTexture(SAMPLER_COMPRESS, Compress, Frame); // FIXME: Missing Frame Parameter
+				BindTexture(SAMPLER_STRETCH, Stretch, Frame); // FIXME: Missing Frame Parameter
+				BindTexture(SAMPLER_BUMPCOMPRESS, BumpCompress, BumpCompress); // FIXME: Missing Frame Parameter
+				BindTexture(SAMPLER_BUMPSTRETCH, BumpStretch, BumpFrame); // FIXME: Missing Frame Parameter
 			}
 
 			// Ambient occlusion
