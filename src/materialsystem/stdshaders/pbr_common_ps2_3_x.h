@@ -161,7 +161,7 @@ void calculateLight(PBR_Data_t info, float3 f3LightDir, float3 f3LightIntensity,
 	#if SUBSURFACESCATTERING
 		float f1Attenuation = dot(info.f3NormalWS, f3LightDir);
 		float f1TexCoordX = (f1Attenuation * 0.5f + 0.5f);
-		float f1TexCoordY = /info.f1Curvature);
+		float f1TexCoordY = (info.f1Curvature);
 
 		float3 f3LightWrap = tex2Dlod(Sampler_SSSLUT, float4(f1TexCoordX, f1TexCoordY, 0.0f, 0.0f)).rgb;
 
