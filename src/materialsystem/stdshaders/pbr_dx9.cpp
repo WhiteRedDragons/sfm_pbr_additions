@@ -594,7 +594,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 			pShaderAPI->SetPixelShaderConstant(PBR_PS_FLOAT_CONTROLS1, cControls1);
 
 			// c1
-			if(bHasParallax || bThicknessTexture)
+			if(bHasParallax || bHasDualLobe)
 			{
 				float4 cControls2;
 				cControls2.x = GetFloat(DualLobe_RoughnessBias);
