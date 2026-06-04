@@ -107,7 +107,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 		SHADER_PARAM(PremultipliedAlpha,		SHADER_PARAM_TYPE_BOOL, "", "")
 
-		SHADER_PARAM(SSS_ControlTexture,		SHADER_PARAM_TYPE_BOOL, "", "Subsurface Scattering Data\n[R] Thickness.\n[G] Curvature.")
+		SHADER_PARAM(SSS_ControlTexture,		SHADER_PARAM_TYPE_TEXTURE, "", "Subsurface Scattering Data\n[R] Thickness.\n[G] Curvature.")
 		SHADER_PARAM(SSS_ThicknessFlip,			SHADER_PARAM_TYPE_BOOL, "", "Flips the Thickness Texture from $SSSControlTexture.")
 		SHADER_PARAM(SSS_ThicknessExponent,		SHADER_PARAM_TYPE_FLOAT, "", "Exponent Factor for the Thickness Texture.")
 		SHADER_PARAM(SSS_CurvatureFlip,			SHADER_PARAM_TYPE_BOOL, "", "Flips the Curvature texture from $SSSControlTexture.")
