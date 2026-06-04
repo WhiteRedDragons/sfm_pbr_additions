@@ -38,7 +38,7 @@ const Sampler_t SAMPLER_SSSLUT			= SHADER_SAMPLER9;
 const Sampler_t SAMPLER_SSSCONTROLS		= SHADER_SAMPLER10;
 
 // Convars
-static ConVar pbr_version("pbr_version", "1.12", FCVAR_CHEAT);
+static ConVar pbr_version("pbr_version", "1.14", FCVAR_CHEAT);
 static ConVar mat_pbr_parallaxmap("mat_pbr_parallaxmap", "1");
 
 static ConVar pbr_microshadows_globalstrength("pbr_microshadows_globalstrength", "0.50", FCVAR_NONE);

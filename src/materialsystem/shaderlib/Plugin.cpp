@@ -5,6 +5,8 @@
 
 #include "materialsystem/ishadersystem.h"
 
+#include "ProceduralTextures.h"
+
 #include <Windows.h>
 
 const char *ccDescription = "ShiroDkxtro2's Version of the PBR Shader";
@@ -16,10 +18,10 @@ class CPlugin_ShaderPBR : public IServerPluginCallbacks
 	void Pause( void ) override {}
 	void UnPause( void ) override {}
 	const char* GetPluginDescription( void ) override { return ccDescription; }
-	void LevelInit( char const* pMapName ) override {}
+	void LevelInit( char const* pMapName ) override;
 	void ServerActivate( edict_t* pEdictList, int edictCount, int clientMax ) override {}
 	void GameFrame( bool simulating ) override {}
-	void LevelShutdown( void ) override {}
+	void LevelShutdown( void ) override;
 	void ClientActive( edict_t* pEntity ) override {}
 	void ClientFullyConnect( edict_t* pEntity ) override {}
 	void ClientDisconnect( edict_t* pEntity ) override {}
@@ -38,7 +40,7 @@ class CPlugin_ShaderPBR : public IServerPluginCallbacks
 
 bool CPlugin_ShaderPBR::Load( CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory )
 {
-	ConColorMsg( Color( 255, 255, 255, 255 ), "[PBR Shader - Modified by ShiroDkxtro2] Loading...\n" ); 
+	ConColorMsg( Color( 255, 255, 255, 255 ), "[PBR Shader - ShiroDkxtro2] Loading...\n" ); 
 
 	materials = ( IMaterialSystem* )interfaceFactory( MATERIAL_SYSTEM_INTERFACE_VERSION, NULL );
 
@@ -46,6 +48,18 @@ bool CPlugin_ShaderPBR::Load( CreateInterfaceFn interfaceFactory, CreateInterfac
 		return false;
 
 	return true;
+}
+
+void CPlugin_ShaderPBR::LevelInit(char const* pMapName)
+{
+	ConColorMsg(Color(255, 255, 255, 255), "[PBR Shader - ShiroDkxtro2] Creating Procedural Textures\n");
+	InitProceduralTextures(materials);
+}
+
+void CPlugin_ShaderPBR::LevelShutdown(void)
+{
+	ConColorMsg(Color(255, 255, 255, 255), "[PBR Shader - ShiroDkxtro2] Shutting down Procedural Textures\n");
+	ShutdownProceduralTextures();
 }
 
 HMODULE g_hModule = NULL;

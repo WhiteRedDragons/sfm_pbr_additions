@@ -199,6 +199,7 @@
     <ClCompile Include="..\stdshaders\shadersource\renderpasses\SSAODrawNormalPass.cpp" />
     <ClCompile Include="BaseShader.cpp" />
     <ClCompile Include="Plugin.cpp" />
+    <ClCompile Include="ProceduralTextures.cpp" />
     <ClCompile Include="ProxyShaderAPI.cpp" />
     <ClCompile Include="ProxyShaderShadow.cpp" />
     <ClCompile Include="ShaderDLL.cpp" />
@@ -255,6 +256,7 @@
     <ClInclude Include="BaseShader.h" />
     <ClInclude Include="cshader.h" />
     <ClInclude Include="ishadersystem.h" />
+    <ClInclude Include="ProceduralTextures.h" />
     <ClInclude Include="ProxyShaderAPI.h" />
     <ClInclude Include="ProxyShaderShadow.h" />
     <ClInclude Include="ShaderDLL.h" />

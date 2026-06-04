@@ -104,6 +104,9 @@
     <ClCompile Include="..\stdshaders\shadersource\renderpasses\SSAODrawNormalPass.cpp">
       <Filter>Source Files\Shaders %28C++%29\Renderpasses</Filter>
     </ClCompile>
+    <ClCompile Include="ProceduralTextures.cpp">
+      <Filter>Source Files\BaseShader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\public\tier0\basetypes.h">
@@ -269,6 +272,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\stdshaders\shadersource\renderpasses\SSAODrawNormalPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProceduralTextures.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
