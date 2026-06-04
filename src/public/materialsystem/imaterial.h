@@ -590,6 +590,8 @@ public:
 	// Gets the current alpha modulation
 	virtual float			GetAlphaModulation() = 0;
 	virtual void			GetColorModulation( float *r, float *g, float *b ) = 0;
+	// EvanPurr: Added in SFM branch only
+	virtual void			GetColorModulationWithColor2( float *r, float *g, float *b ) = 0;
 
 	// Is this translucent given a particular alpha modulation?
 	virtual bool			IsTranslucentUnderModulation( float fAlphaModulation = 1.0f ) const = 0;
@@ -610,6 +612,11 @@ public:
 	virtual void			RefreshPreservingMaterialVars() = 0;
 
 	virtual bool			WasReloadedFromWhitelist() = 0;
+
+	// EvanPurr: Added in SFM branch only
+	virtual void*			GetParams() = 0; // PyObject* return
+	// EvanPurr: Added in SFM branch only
+	virtual void			Precache() = 0;
 };
 
 

@@ -722,6 +722,10 @@ public:
 	// Stuff that gets exported to the launcher through the engine
 	virtual void				SwapBuffers( ) = 0;
 
+	// EvanPurr: Added in SFM branch only
+	virtual int					GetDisplayedFrameIndex() const = 0;
+	virtual int					GetCurrentFrameIndex() const = 0;
+
 	// Flushes managed textures from the texture cacher
 	virtual void				EvictManagedResources() = 0;
 
@@ -881,7 +885,8 @@ public:
 
 	//---------------------------------
 
-	virtual ITexture *			FindTexture( char const* pTextureName, const char *pTextureGroupName, bool complain = true ) = 0;
+	// EvanPurr: added int nAdditionalCreationFlags = 0
+	virtual ITexture *			FindTexture( char const* pTextureName, const char *pTextureGroupName, bool complain = true, int nAdditionalCreationFlags = 0 ) = 0;
 
 	// Checks to see if a particular texture is loaded
 	virtual bool				IsTextureLoaded( char const* pTextureName ) const = 0;
@@ -941,6 +946,9 @@ public:
 	// -----------------------------------------------------------
 	// Lightmaps
 	// -----------------------------------------------------------
+
+	// EvanPurr: Added in SFM branch only
+	virtual void				SetUsingGlobalLight( bool bUsingGlobalLight ) = 0;
 
 	// To allocate lightmaps, sort the whole world by material twice.
 	// The first time through, call AllocateLightmap for every surface.
@@ -1397,6 +1405,10 @@ public:
 	virtual void SetFlashlightStateEx( const FlashlightState_t &state, const VMatrix &worldToTexture, ITexture *pFlashlightDepthTexture ) = 0;
 	virtual void SetFlashlightStateExDeRef( const FlashlightState_t &state, ITexture *pFlashlightDepthTexture ) = 0;
 
+	// EvanPurr: Added in SFM branch only
+	virtual void SetSimpleProjection( FlashlightState_t state ) = 0;
+	virtual void SetSimpleLight( FlashlightState_t state ) = 0;
+
 	// Returns the currently bound local cubemap
 	virtual ITexture *GetLocalCubemap( ) = 0;
 
@@ -1507,6 +1519,10 @@ public:
 
 	//only actually sets a bool that can be read in from shaders, doesn't do any of the legwork
 	virtual void EnableSinglePassFlashlightMode( bool bEnable ) = 0;
+
+	// EvanPurr: Added in SFM branch only
+	// DeferredRenderMode_t
+	virtual void SetDeferredShading( int nMode ) = 0;
 
 	// Draws instances with different meshes
 	virtual void DrawInstances( int nInstanceCount, const MeshInstanceData_t *pInstance ) = 0;

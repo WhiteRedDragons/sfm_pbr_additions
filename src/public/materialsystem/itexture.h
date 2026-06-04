@@ -86,9 +86,10 @@ public:
 
 	// Reconstruct the texture bits in HW memory
 
+	// EvanPurr: added int nAdditionalCreationFlags = 0
 	// If rect is not specified, reconstruct all bits, otherwise just
 	// reconstruct a subrect.
-	virtual void Download( Rect_t *pRect = 0 ) = 0;
+	virtual void Download( Rect_t *pRect = 0, int nAdditionalCreationFlags = 0 ) = 0;
 
 	// Uses for stats. . .get the approximate size of the texture in it's current format.
 	virtual int GetApproximateVidMemBytes( void ) const = 0;

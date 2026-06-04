@@ -218,6 +218,7 @@ struct MeshInstanceData_t
 	const IVertexBuffer	*	m_pColorBuffer;
 	int						m_nColorVertexOffsetInBytes;
 	ShaderStencilState_t *	m_pStencilState;
+	int						Unk0; // EvanPurr: not sure what is it (maybe m_nLightmapPageId?), but valve added something before m_DiffuseModulation :V
 	Vector4D				m_DiffuseModulation;
 };
 
