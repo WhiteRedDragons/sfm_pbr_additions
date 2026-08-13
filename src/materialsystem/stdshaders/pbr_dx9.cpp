@@ -11,6 +11,7 @@
 #include "pbr_registermap.h"
 
 #include "vtf/vtf.h"
+#include "Shadersource/Renderpasses/EmissiveBlend.h"
 
 // Includes for PS30
 #include "pbr_vs30.inc"
@@ -89,7 +90,6 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		SHADER_PARAM(Parallax,					SHADER_PARAM_TYPE_BOOL, "0", "Use Parallax Occlusion Mapping.")
 		SHADER_PARAM(ParallaxDepth,				SHADER_PARAM_TYPE_FLOAT, "0.0030", "Depth of the Parallax Map")
 		SHADER_PARAM(ParallaxCenter,			SHADER_PARAM_TYPE_FLOAT, "0.5", "Center depth of the Parallax Map")
-		SHADER_PARAM(EmissiveFactor,			SHADER_PARAM_TYPE_FLOAT, "1.0", "Emissive factor" )
 		SHADER_PARAM(SpecularFactor,			SHADER_PARAM_TYPE_FLOAT, "1.0", "Specular factor" )
 		SHADER_PARAM(Compress,					SHADER_PARAM_TYPE_TEXTURE, "", "Compression wrinklemap")
 		SHADER_PARAM(BumpCompress,				SHADER_PARAM_TYPE_TEXTURE, "", "Stretch bumpmap" )
@@ -113,7 +113,34 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		SHADER_PARAM(SSS_CurvatureFlip,			SHADER_PARAM_TYPE_BOOL, "", "Flips the Curvature texture from $SSSControlTexture.")
 		SHADER_PARAM(SSS_CurvatureExponent,		SHADER_PARAM_TYPE_FLOAT, "", "Exponent Factor for the Curvature Texture.")
 		SHADER_PARAM(SSS_PreintegrationLUT,		SHADER_PARAM_TYPE_TEXTURE, "", "[RGB] Preintegration Lookup-Texture.\nX is Theta, Y is 1/Curvature.")
+
+		Declare_EmissiveBlendParameters()
+
+		// These are only for backwards Compatibility, they will not be expanded upon.
+		SHADER_PARAM(EmissionTexture,			SHADER_PARAM_TYPE_TEXTURE, "", "")
+		SHADER_PARAM(EmissionTextureFrame,		SHADER_PARAM_TYPE_INTEGER, "", "")
+		SHADER_PARAM(EmissionTextureTransform,	SHADER_PARAM_TYPE_MATRIX, "", "")
+		SHADER_PARAM(EmissionTextureScale,		SHADER_PARAM_TYPE_VEC2,	"", "")
+		SHADER_PARAM(EmissionTint,				SHADER_PARAM_TYPE_COLOR, "", "")
+		SHADER_PARAM(EmissionFactor,			SHADER_PARAM_TYPE_FLOAT, "", "")
+		SHADER_PARAM(EmissionBlendMode,		SHADER_PARAM_TYPE_INTEGER, "", "")
 	END_SHADER_PARAMS
+
+	void PBR_SetupEmissiveBlendVars(EmissiveBlend_Vars_t& EmissiveVars)
+	{
+		// Emissive Blend Params
+		EmissiveVars.InitVars(EmissiveBlendEnabled);
+	
+		// Support for $SelfIllumTexture
+		EmissiveVars.SelfIllum.InitVars(-1, -1);
+	
+		// $EmissionTexture takes over $DetailBlendMode 5
+		EmissiveVars.Detail.InitVars(EmissionTexture, EmissionTextureFrame, EmissionTextureTransform, EmissionTextureScale, EmissionBlendMode, EmissionFactor);
+		EmissiveVars.Detail.m_f3DetailTint = GetFloat3(EmissionTint);
+
+		// Minimum Light and Transform Fallbacks
+		EmissiveVars.Base.InitVars(BaseTexture, Frame, BaseTextureTransform);
+	}
 
 	// Initializing parameters
 	SHADER_INIT_PARAMS()
@@ -178,8 +205,6 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		DefaultFloat(SSS_CurvatureExponent, 1.0f);
 
 		DefaultFloat(NormalMapFactor, 1.0f);
-
-		DefaultFloat(EmissiveFactor, 1.0f);
 		DefaultFloat(SpecularFactor, 1.0f);
 
 		DefaultFloat(DualLobe_RoughnessBias, -0.2f);
@@ -212,6 +237,32 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 
 		DefaultBool(PremultipliedAlpha, true);
 		DefaultFloat(AmbientOcclusion, 1.0f);
+
+		//==========================================================================//
+		// Emissive Blend Support
+		//==========================================================================//
+
+		EmissiveBlend_Vars_t EmissiveVars;
+		PBR_SetupEmissiveBlendVars(EmissiveVars);
+		EmissiveBlend_Init_Params(this, EmissiveVars);
+
+		//==========================================================================//
+		// Handle backwards-compatibility with $EmissionTexture
+		//==========================================================================//
+		if(IsDefined(EmissionBlendMode))
+		{
+			int nBlendMode = GetInt(EmissionBlendMode);
+			if(!IsSelfIllumDetailMode(nBlendMode))
+			{
+				ShaderDebugMessage("uses invalid $EmissiveBlendMode. $EmissionTexture will be disabled.\n");
+				SetUndefined(EmissionTexture);
+			}
+		}
+		else
+			SetInt(EmissionBlendMode, 5);
+
+		DefaultFloat(EmissionFactor, 1.0f);
+		DefaultFloat2(EmissionTextureScale, 1.0f, 1.0f);
 	}
 
 	// Define shader fallback
@@ -272,6 +323,22 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		// SFM Shenanigans presumably
 		SetFlag2(MATERIAL_VAR2_USE_GBUFFER0);
 		SetFlag2(MATERIAL_VAR2_USE_GBUFFER1);
+
+		//==========================================================================//
+		// Emissive Blend Support
+		//==========================================================================//
+
+		EmissiveBlend_Vars_t EmissiveVars;
+		PBR_SetupEmissiveBlendVars(EmissiveVars);
+		EmissiveBlend_Init_Params(this, EmissiveVars);
+
+		//==========================================================================//
+		// Handle backwards-compatibility with $EmissionTexture
+		//==========================================================================//
+
+		// This will be used in EmissiveBlend as $DetailBlendMode 5 or 6
+		// Shaders are expected to have loaded this Texture themselves
+		LoadTexture(EmissionTexture, TEXTUREFLAGS_SRGB);
 	};
 
 	// Virtual Void Override for Context Data
@@ -913,6 +980,7 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 	{
 		if(ShouldDrawNormalsForSSAO())
 		{
+			// TODO: Theoratically AlphaTest is still possible by using clip() in the Shader!
 			// Non-Opaque Materials should not write a SSAO Factor
 			if(HasFlag(MATERIAL_VAR_TRANSLUCENT) || HasFlag(MATERIAL_VAR_ADDITIVE) || HasFlag(MATERIAL_VAR_ALPHATEST))
 			{
@@ -925,6 +993,10 @@ BEGIN_VS_SHADER(PBR, "PBR shader")
 		else
 		{
 			PBR_Draw_Internal(pShaderShadow, pShaderAPI, pContextDataPtr);
+
+			EmissiveBlend_Vars_t EmissiveVars;
+			PBR_SetupEmissiveBlendVars(EmissiveVars);
+			EmissiveBlend_Shader_Draw(this, pShaderShadow, pShaderAPI, EmissiveVars);
 		}
 	}
 END_SHADER
