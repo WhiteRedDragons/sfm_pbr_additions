@@ -286,7 +286,7 @@ float4 main(PS_INPUT i) : COLOR
 	//==================================================================================================
 	
 	// Start direct
-	float3 f3DirectDiffuse = 0.0;	
+	float3 f3DirectDiffuse = 0.0f;	
 	float3 f3DirectSpecular = 0.0f;
 
 	// Only do regular World Lights with > 0 Lights
@@ -365,7 +365,7 @@ float4 main(PS_INPUT i) : COLOR
 	// Since I disabled all the Indirect Lighting Code we need to account for it differently.
 	// This will essentially do the same Thing:
 	#if !PROJTEX
-		f3CombinedLighting = info.f3DiffuseColor * info.f1AmbientOcclusion * g_f1Fullbright;
+		f3CombinedLighting += info.f3DiffuseColor * info.f1AmbientOcclusion * g_f1Fullbright;
 	#endif
 	
 	return LUX_Finalise(float4(f3CombinedLighting, f1Alpha), info.f3WorldPos, f1Depth);
